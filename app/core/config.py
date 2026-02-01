@@ -1,11 +1,20 @@
-from dotenv import load_dotenv
-load_dotenv()
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-import os
+class Settings(BaseSettings):
+    ## app ##
+    APP_NAME: str = "AUB Reviews"
+    ENV: str = "dev"
+    ## auth ##
+    ENTRA_TENANT_ID: str | None = None
+    ENTRA_CLIENT_ID: str | None = None
+    ENTRA_CLIENT_SECRET: str | None = None
+    ENTRA_REDIRECT_URI: str | None = None
+    ENTRA_AUTHORITY: str | None = None
 
-ENTRA_TENANT_ID = os.getenv("ENTRA_TENANT_ID")
-ENTRA_CLIENT_ID = os.getenv("ENTRA_CLIENT_ID")
-ENTRA_CLIENT_SECRET = os.getenv("ENTRA_CLIENT_SECRET")
-ENTRA_REDIRECT_URI = os.getenv("ENTRA_REDIRECT_URI")
-ENTRA_AUTHORITY = os.getenv("ENTRA_AUTHORITY")
-SESSION_SECRET = os.getenv("SESSION_SECRET")
+    ## sessions ##
+    SESSION_SECRET: str = "change-me"
+
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+
+settings = Settings()
+
