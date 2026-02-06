@@ -2,12 +2,15 @@ import json
 import secrets
 import base64
 from urllib.parse import urlencode
-from fastapi import APIRouter, Response, Request, status, HTTPException, Query
+from fastapi import APIRouter, Response, Request, status, HTTPException, Query, Depends
 from fastapi.responses import RedirectResponse, JSONResponse
+from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.logger import get_logger
 from app.core.session import set_login_cookie, clear_login_cookie, require_user
+from app.core.database import get_db
 from app.core.oauth2 import entra_client, decode_id_token
+from app.models.user import User
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -92,10 +95,10 @@ def logout(response: Response):
 
 
 @router.get("/callback")
-async def callback(request: Request, code: str = Query(...), state: str = Query(...)):
+async def callback(request: Request, code: str = Query(...), state: str = Query(...), db: Session = Depends(get_db)):
     """
     OAuth2 callback endpoint.
-    Exchanges authorization code for tokens and creates session.
+    Exchanges authorization code for tokens, saves user to DB, and creates session.
     """
     try:
         # Verify state parameter
@@ -121,12 +124,28 @@ async def callback(request: Request, code: str = Query(...), state: str = Query(
         
         # Decode ID token and extract user info
         claims = decode_id_token(id_token)
-        user_info = entra_client.extract_user_info(claims)
+        entra_info = entra_client.extract_user_info(claims)
         
-        logger.info(f"Callback: authenticated user {user_info['email']} (role: {user_info['role']})")
+        # Save or update user in database
+        user = User.create_or_update(
+            db,
+            entra_oid=entra_info["user_id"],
+            entra_email=entra_info["email"],
+            role=entra_info["role"]
+        )
         
-        # Create JSON response with user info
-        response_data = {"ok": True, "user": user_info}
+        logger.info(f"Callback: authenticated user {user.username} (entra_email: {entra_info['email']}, role: {user.role})")
+        
+        # Session data: use anonymous username, not email
+        session_data = {
+            "user_id": user.id,
+            "username": user.username,
+            "role": user.role,
+            "entra_oid": user.entra_oid,
+        }
+        
+        # Create JSON response with anonymous user info
+        response_data = {"ok": True, "user": session_data}
         response = JSONResponse(content=response_data)
         
         # Clear PKCE cookies
@@ -134,7 +153,7 @@ async def callback(request: Request, code: str = Query(...), state: str = Query(
         response.delete_cookie(PKCE_CODE_VERIFIER_COOKIE, path="/")
         
         # Set login session cookie
-        set_login_cookie(response, settings.SESSION_SECRET, user_info)
+        set_login_cookie(response, settings.SESSION_SECRET, session_data)
         
         return response
     

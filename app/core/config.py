@@ -13,6 +13,9 @@ class Settings(BaseSettings):
 
     ## sessions ##
     SESSION_SECRET: str = "change-me"
+    
+    ## database ##
+    DATABASE_URL: str = "sqlite:///./aub_reviews.db"  # Default to SQLite for local dev
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
