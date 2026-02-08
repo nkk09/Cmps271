@@ -82,7 +82,10 @@ class EntraAuthClient:
         }
 
 
-entra_client = EntraAuthClient()
+# Only create an Entra client if OAuth is enabled. When disabled this module
+# still exports `decode_id_token` but `entra_client` will be None so callers
+# can choose an alternative (e.g. OTP) flow.
+entra_client = EntraAuthClient() if settings.ENABLE_OAUTH else None
 
 
 def decode_id_token(id_token: str) -> dict:
