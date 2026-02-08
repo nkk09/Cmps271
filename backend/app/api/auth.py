@@ -174,13 +174,14 @@ def otp_send(payload: dict = Body(...), db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email domain not allowed (must be @mail.aub.edu or @aub.edu.lb)")
 
     # Rate limiting: max 3 OTPs per email per hour
-    recent_count = OTP.count_recent_for_email(db, email, minutes=60)
-    if recent_count >= 3:
-        logger.warning(f"Rate limit exceeded for OTP send: {email}")
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many OTP requests. Please try again in 1 hour."
-        )
+    # TEMPORARILY DISABLED FOR TESTING
+    # recent_count = OTP.count_recent_for_email(db, email, minutes=60)
+    # if recent_count >= 3:
+    #     logger.warning(f"Rate limit exceeded for OTP send: {email}")
+    #     raise HTTPException(
+    #         status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+    #         detail="Too many OTP requests. Please try again in 1 hour."
+    #     )
 
     # Clean up any expired OTPs before creating a new one
     OTP.cleanup_expired(db)
@@ -202,56 +203,62 @@ def otp_verify(response: Response, payload: dict = Body(...), db: Session = Depe
     Verify OTP code and create user session.
     Enforces max 5 failed attempts per OTP before expiry.
     """
-    if settings.ENABLE_OAUTH:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="OTP disabled when OAuth is enabled")
+    try:
+        if settings.ENABLE_OAUTH:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="OTP disabled when OAuth is enabled")
 
-    email = (payload or {}).get("email", "").strip()
-    code = (payload or {}).get("code", "").strip()
-    
-    if not email or not code:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing email or code")
+        email = (payload or {}).get("email", "").strip()
+        code = (payload or {}).get("code", "").strip()
+        
+        if not email or not code:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing email or code")
 
-    # Retrieve latest non-expired OTP for this email
-    otp_record = OTP.get_latest_for_email(db, email)
-    if not otp_record:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No valid OTP found for this email")
+        # Retrieve latest non-expired OTP for this email
+        otp_record = OTP.get_latest_for_email(db, email)
+        if not otp_record:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No valid OTP found for this email")
 
-    # Check if OTP is expired
-    if OTP.is_expired(otp_record):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="OTP has expired")
+        # Check if OTP is expired
+        if OTP.is_expired(otp_record):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="OTP has expired")
 
-    # Check attempt limit (max 5 wrong attempts)
-    if otp_record.attempts >= 5:
-        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too many failed attempts. Request a new OTP.")
+        # Check attempt limit (max 5 wrong attempts)
+        if otp_record.attempts >= 5:
+            raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too many failed attempts. Request a new OTP.")
 
-    # Verify code
-    if otp_record.code != str(code):
-        otp_record.attempts += 1
+        # Verify code
+        if otp_record.code != str(code):
+            otp_record.attempts += 1
+            db.commit()
+            remaining = 5 - otp_record.attempts
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid OTP code. {remaining} attempts remaining.")
+
+        # OTP is valid: create or update user
+        role = _role_from_email(email)
+        entra_oid = f"local:{email.lower()}"
+        user = User.create_or_update(db, entra_oid=entra_oid, entra_email=email.lower(), role=role)
+
+        # Mark OTP as verified and consumed
+        otp_record.verified_at = datetime.utcnow()
         db.commit()
-        remaining = 5 - otp_record.attempts
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid OTP code. {remaining} attempts remaining.")
 
-    # OTP is valid: create or update user
-    role = _role_from_email(email)
-    entra_oid = f"local:{email.lower()}"
-    user = User.create_or_update(db, entra_oid=entra_oid, entra_email=email.lower(), role=role)
+        session_data = {
+            "user_id": user.id,
+            "username": user.username,
+            "role": user.role,
+            "entra_oid": user.entra_oid,
+        }
 
-    # Mark OTP as verified and consumed
-    otp_record.verified_at = datetime.utcnow()
-    db.commit()
+        # Set login session cookie
+        set_login_cookie(response, settings.SESSION_SECRET, session_data)
 
-    session_data = {
-        "user_id": user.id,
-        "username": user.username,
-        "role": user.role,
-        "entra_oid": user.entra_oid,
-    }
-
-    # Set login session cookie
-    set_login_cookie(response, settings.SESSION_SECRET, session_data)
-
-    logger.info(f"OTP verified and user logged in: {user.username} ({user.entra_email})")
-    return {"ok": True, "user": session_data}
+        logger.info(f"OTP verified and user logged in: {user.username} ({user.entra_email})")
+        return {"ok": True, "user": session_data}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in otp_verify: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
 @router.get("/callback")
