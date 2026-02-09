@@ -155,4 +155,47 @@ input {
   cursor: not-allowed;
   text-decoration: none;
 }
+/* Role toggle (Student / Professor) */
+.role-tabs {
+  display: inline-flex;
+  gap: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  padding: 4px;
+  background: #f9fafb;
+  margin: 12px 0 18px;
+}
+
+.role-tabs button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease, box-shadow 150ms ease;
+}
+
+.role-tabs button:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.role-tabs button.active {
+  background: #111827;
+  color: white;
+  box-shadow: 0 6px 16px rgba(17, 24, 39, 0.18);
+}
+
+.role-tabs button:focus-visible {
+  outline: 3px solid rgba(59, 130, 246, 0.45);
+  outline-offset: 2px;
+}
+
+.role-tabs button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 
