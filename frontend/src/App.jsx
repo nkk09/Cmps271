@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import Landing from "./pages/Landing"
 import Login from "./pages/Login"
-import Me from "./pages/Me"
 
 function App() {
   const [user, setUser] = useState(null)
