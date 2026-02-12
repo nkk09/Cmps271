@@ -865,3 +865,49 @@ FROM courses
 2026-02-11 18:00:03,530 | INFO | sqlalchemy.engine.Engine | COMMIT
 2026-02-11 18:01:43,242 | DEBUG | app.api.auth | Me called, user resolved
 2026-02-11 18:01:43,246 | DEBUG | app.api.auth | Me called, user resolved
+2026-02-12 08:05:07,958 | INFO | app.main | Application startup complete
+2026-02-12 08:05:07,970 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-12 08:05:07,970 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("otps")
+2026-02-12 08:05:07,971 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-12 08:05:07,978 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("users")
+2026-02-12 08:05:07,979 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-12 08:05:07,980 | INFO | sqlalchemy.engine.Engine | COMMIT
+2026-02-12 08:05:07,981 | INFO | app.main | Database initialized successfully
+2026-02-12 08:05:07,990 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-12 08:05:07,994 | INFO | sqlalchemy.engine.Engine | DELETE FROM otps WHERE otps.expires_at <= ?
+2026-02-12 08:05:07,995 | INFO | sqlalchemy.engine.Engine | [generated in 0.00122s] ('2026-02-12 06:05:07.985782',)
+2026-02-12 08:05:07,997 | INFO | sqlalchemy.engine.Engine | COMMIT
+2026-02-12 08:05:46,515 | DEBUG | app.api.auth | Me called, user resolved
+2026-02-12 08:05:46,522 | DEBUG | app.api.auth | Me called, user resolved
+2026-02-12 08:05:57,076 | INFO | app.api.auth | Logout: session cookie cleared
+2026-02-12 08:06:14,595 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-12 08:06:14,597 | INFO | sqlalchemy.engine.Engine | DELETE FROM otps WHERE otps.expires_at <= ?
+2026-02-12 08:06:14,598 | INFO | sqlalchemy.engine.Engine | [cached since 66.6s ago] ('2026-02-12 06:06:14.593717',)
+2026-02-12 08:06:14,600 | INFO | sqlalchemy.engine.Engine | COMMIT
+2026-02-12 08:06:14,602 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-12 08:06:14,608 | INFO | sqlalchemy.engine.Engine | INSERT INTO otps (email, code, attempts, created_at, expires_at, verified_at) VALUES (?, ?, ?, ?, ?, ?)
+2026-02-12 08:06:14,609 | INFO | sqlalchemy.engine.Engine | [generated in 0.00147s] ('rhm31@mail.aub.edu', '729444', 0, '2026-02-12 06:06:14.607996', '2026-02-12 06:16:14.601513', None)
+2026-02-12 08:06:14,615 | INFO | sqlalchemy.engine.Engine | COMMIT
+2026-02-12 08:06:14,627 | INFO | app.api.auth | OTP code for rhm31@mail.aub.edu: 729444 (expires in 10 min)
+2026-02-12 08:06:18,923 | INFO | app.api.auth | OTP email sent successfully to rhm31@mail.aub.edu
+2026-02-12 08:06:18,923 | INFO | app.api.auth | OTP created for rhm31@mail.aub.edu, expires at 2026-02-12T06:16:14.601513
+2026-02-12 08:06:41,465 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-12 08:06:41,479 | INFO | sqlalchemy.engine.Engine | SELECT otps.id AS otps_id, otps.email AS otps_email, otps.code AS otps_code, otps.attempts AS otps_attempts, otps.created_at AS otps_created_at, otps.expires_at AS otps_expires_at, otps.verified_at AS otps_verified_at 
+FROM otps 
+WHERE otps.email = ? AND otps.expires_at > ? ORDER BY otps.created_at DESC
+ LIMIT ? OFFSET ?
+2026-02-12 08:06:41,480 | INFO | sqlalchemy.engine.Engine | [generated in 0.00169s] ('rhm31@mail.aub.edu', '2026-02-12 06:06:41.463506', 1, 0)
+2026-02-12 08:06:41,491 | INFO | sqlalchemy.engine.Engine | SELECT users.id AS users_id, users.username AS users_username, users.entra_oid AS users_entra_oid, users.entra_email AS users_entra_email, users.role AS users_role, users.status AS users_status, users.created_at AS users_created_at, users.last_login AS users_last_login 
+FROM users 
+WHERE users.entra_oid = ?
+ LIMIT ? OFFSET ?
+2026-02-12 08:06:41,493 | INFO | sqlalchemy.engine.Engine | [generated in 0.00168s] ('local:rhm31@mail.aub.edu', 1, 0)
+2026-02-12 08:06:41,501 | INFO | sqlalchemy.engine.Engine | UPDATE users SET last_login=? WHERE users.id = ?
+2026-02-12 08:06:41,503 | INFO | sqlalchemy.engine.Engine | [generated in 0.00189s] ('2026-02-12 06:06:41.495985', 1)
+2026-02-12 08:06:41,509 | INFO | sqlalchemy.engine.Engine | COMMIT
+2026-02-12 08:06:41,520 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-12 08:06:41,524 | INFO | sqlalchemy.engine.Engine | UPDATE otps SET verified_at=? WHERE otps.id = ?
+2026-02-12 08:06:41,525 | INFO | sqlalchemy.engine.Engine | [generated in 0.00129s] ('2026-02-12 06:06:41.520077', 1)
+2026-02-12 08:06:41,529 | INFO | sqlalchemy.engine.Engine | COMMIT
+2026-02-12 08:06:41,541 | INFO | app.api.auth | OTP verified and user logged in: KeenEagle6099 (rhm31@mail.aub.edu)
+2026-02-12 08:06:41,554 | DEBUG | app.api.auth | Me called, user resolved
