@@ -851,3 +851,17 @@ FROM courses
 2026-02-11 17:59:42,416 | INFO | sqlalchemy.engine.Engine | DELETE FROM otps WHERE otps.expires_at <= ?
 2026-02-11 17:59:42,416 | INFO | sqlalchemy.engine.Engine | [generated in 0.00074s] ('2026-02-11 15:59:42.411129',)
 2026-02-11 17:59:42,417 | INFO | sqlalchemy.engine.Engine | COMMIT
+2026-02-11 18:00:03,510 | INFO | app.main | Application startup complete
+2026-02-11 18:00:03,514 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-11 18:00:03,515 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("otps")
+2026-02-11 18:00:03,515 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-11 18:00:03,517 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("users")
+2026-02-11 18:00:03,518 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-11 18:00:03,519 | INFO | sqlalchemy.engine.Engine | COMMIT
+2026-02-11 18:00:03,520 | INFO | app.main | Database initialized successfully
+2026-02-11 18:00:03,525 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-11 18:00:03,528 | INFO | sqlalchemy.engine.Engine | DELETE FROM otps WHERE otps.expires_at <= ?
+2026-02-11 18:00:03,529 | INFO | sqlalchemy.engine.Engine | [generated in 0.00071s] ('2026-02-11 16:00:03.523509',)
+2026-02-11 18:00:03,530 | INFO | sqlalchemy.engine.Engine | COMMIT
+2026-02-11 18:01:43,242 | DEBUG | app.api.auth | Me called, user resolved
+2026-02-11 18:01:43,246 | DEBUG | app.api.auth | Me called, user resolved
