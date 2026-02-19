@@ -1,0 +1,389 @@
+/* Landing Page Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.landing-page {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+  background-color: #f8f9fa;
+  min-height: 100vh;
+}
+
+/* HEADER */
+.landing-header {
+  background: linear-gradient(135deg, #8b1538, #5c0f25);
+  color: white;
+  padding: 20px 40px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo-section {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.logo-title {
+  font-size: 28px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.profile-section {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 10px 20px;
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+}
+
+.username {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.logout-btn {
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  transition: all 0.3s ease;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-2px);
+}
+
+/* MAIN CONTENT */
+.landing-main {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+/* SEARCH SECTION */
+.search-section {
+  margin-bottom: 50px;
+}
+
+.search-bar {
+  width: 100%;
+  max-width: 600px;
+  padding: 15px 20px;
+  font-size: 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 30px;
+  outline: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.search-bar:focus {
+  border-color: #8b1538;
+  box-shadow: 0 4px 15px rgba(139, 21, 56, 0.2);
+  background-color: #fff;
+}
+
+/* CATEGORIES SECTION */
+.categories-section {
+  margin-bottom: 50px;
+}
+
+.categories-section h2 {
+  font-size: 24px;
+  margin-bottom: 20px;
+  color: #333;
+  font-weight: 600;
+}
+
+.categories-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.category-btn {
+  padding: 10px 20px;
+  border: 2px solid #e0e0e0;
+  background: white;
+  border-radius: 25px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #555;
+  transition: all 0.3s ease;
+}
+
+.category-btn:hover {
+  border-color: #8b1538;
+  color: #8b1538;
+}
+
+.category-btn.active {
+  background: linear-gradient(135deg, #8b1538, #5c0f25);
+  color: white;
+  border-color: #8b1538;
+}
+
+/* COURSES SECTION */
+.courses-section {
+  margin-bottom: 50px;
+}
+
+.courses-section h2 {
+  font-size: 24px;
+  margin-bottom: 30px;
+  color: #333;
+  font-weight: 600;
+}
+
+.courses-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 25px;
+}
+
+.course-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.course-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 30px rgba(139, 21, 56, 0.15);
+}
+
+.course-image {
+  background: linear-gradient(135deg, #8b1538, #5c0f25);
+  color: white;
+  height: 120px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 48px;
+}
+
+.course-content {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.course-content h3 {
+  font-size: 18px;
+  margin-bottom: 10px;
+  color: #333;
+  font-weight: 600;
+}
+
+.instructor {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 12px;
+}
+
+.course-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 15px;
+  font-size: 13px;
+  color: #888;
+}
+
+.students,
+.rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.enroll-btn {
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #8b1538, #5c0f25);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  margin-top: auto;
+}
+
+.enroll-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(139, 21, 56, 0.3);
+}
+
+.enroll-btn:active {
+  transform: scale(0.98);
+}
+
+.no-courses {
+  grid-column: 1 / -1;
+  padding: 60px 20px;
+  text-align: center;
+  color: #999;
+}
+
+.no-courses p {
+  font-size: 16px;
+}
+
+/* PROFILE SECTION */
+.profile-card-section {
+  margin-bottom: 40px;
+}
+
+.profile-card {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  max-width: 600px;
+}
+
+.profile-card h2 {
+  font-size: 22px;
+  margin-bottom: 25px;
+  color: #333;
+  font-weight: 600;
+}
+
+.profile-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.profile-item {
+  display: flex;
+  flex-direction: column;
+  padding: 15px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  border-left: 4px solid #8b1538;
+}
+
+.profile-item label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.profile-item span {
+  font-size: 16px;
+  color: #333;
+  font-weight: 500;
+}
+
+/* RESPONSIVE DESIGN */
+@media (max-width: 768px) {
+  .header-content {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .logo-title {
+    font-size: 24px;
+  }
+
+  .search-bar {
+    max-width: 100%;
+  }
+
+  .courses-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+  }
+
+  .course-image {
+    font-size: 36px;
+    height: 100px;
+  }
+
+  .categories-grid {
+    flex-direction: column;
+  }
+
+  .category-btn {
+    width: 100%;
+  }
+
+  .profile-info {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-main {
+    padding: 20px 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .landing-header {
+    padding: 15px 10px;
+  }
+
+  .logo-title {
+    font-size: 20px;
+  }
+
+  .search-bar {
+    font-size: 14px;
+    padding: 12px 15px;
+  }
+
+  .courses-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .course-card {
+    margin: 0;
+  }
+
+  .course-image {
+    font-size: 32px;
+  }
+
+  .user-profile {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
