@@ -8,6 +8,9 @@ from app.core.database import init_db
 from app.core.tasks import cleanup_expired_otps
 from app.api.health import router as health_router
 from app.api.auth import router as auth_router
+from app.api.courses import router as courses_router
+from app.api.reviews import router as reviews_router
+from app.api.users import router as users_router
 
 setup_logger(level="DEBUG" if settings.ENV == "dev" else "INFO")
 logger = get_logger(__name__)
@@ -32,6 +35,9 @@ app.add_middleware(
 
 app.include_router(health_router)
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
+app.include_router(courses_router, prefix="/api/courses", tags=["courses"])
+app.include_router(reviews_router, prefix="/api/reviews", tags=["reviews"])
+app.include_router(users_router, prefix="/api/users", tags=["users"])
 
 
 @app.on_event("startup")

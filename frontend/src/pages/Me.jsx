@@ -1,91 +1,67 @@
 import { useState, useEffect } from "react"
 import "../styles/me.css"
+import api from "../api"
 
 function Me({ onLogout }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
-  const backend = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000"
-
   useEffect(() => {
     // Fetch current user from backend
     const fetchUser = async () => {
       try {
-        const resp = await fetch(`${backend}/auth/me`, {
-          credentials: "include",
-        })
-
-        if (resp.ok) {
-          const data = await resp.json()
-          setUser(data.user)
-        } else {
-          setError("Failed to load user info")
-        }
+        const userData = await api.getCurrentUser()
+        setUser(userData)
       } catch (err) {
         console.error("Error fetching user:", err)
-        setError("Network error")
+        setError("Failed to load user info")
       } finally {
         setLoading(false)
       }
     }
 
     fetchUser()
-  }, [backend])
+  }, [])
 
   const handleLogout = async () => {
     try {
-      const resp = await fetch(`${backend}/auth/logout`, {
+      const backend = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000"
+      await fetch(`${backend}/auth/logout`, {
         method: "POST",
         credentials: "include",
       })
-      if (resp.ok) {
-        onLogout()
-      }
+      onLogout()
     } catch (err) {
       console.error("Logout error:", err)
     }
   }
 
-  if (loading) {
-    return (
-      <div className="me-page">
-        <div className="me-container">
-          <p>Loading...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error || !user) {
-    return (
-      <div className="me-page">
-        <div className="me-container">
-          <p className="error">{error || "User not found"}</p>
-          <button onClick={onLogout}>Back to Login</button>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="me-page">
       <div className="me-container">
-        <div className="me-card">
-          <h1>Welcome, {user.username}!</h1>
-          <div className="user-info">
-            <p>
-              <strong>User ID:</strong> {user.user_id}
-            </p>
-            <p>
-              <strong>Role:</strong> {user.role}
-            </p>
-          </div>
+        {loading && <p>Loading...</p>}
+        {error && <p className="error">{error}</p>}
+        {user && (
+          <div className="me-card">
+            <h1>Welcome, {user.username}!</h1>
+            <div className="user-info">
+              <p>
+                <strong>Anonymous Username:</strong> {user.username}
+              </p>
+              <p>
+                <strong>Role:</strong> {user.role}
+              </p>
+              <p>
+                <strong>Member Since:</strong> {new Date(user.created_at).toLocaleDateString()}
+              </p>
+            </div>
 
-          <button className="logout-btn" onClick={handleLogout}>
-            Logout
-          </button>
-        </div>
+            <button className="logout-btn" onClick={handleLogout}>
+              Logout
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

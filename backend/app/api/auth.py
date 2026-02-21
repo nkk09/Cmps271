@@ -144,10 +144,16 @@ def login():
 
 
 @router.get("/me")
-def me(request: Request):
-    user = require_user(request, settings.SESSION_SECRET)
-    logger.debug("Me called, user resolved")
-    return {"user": user}
+def me(current_user: User = Depends(require_user)):
+    logger.debug(f"Auth /me called, user resolved: {current_user.username}")
+    # Return same format as /api/users/me for compatibility
+    return {
+        "id": current_user.id,
+        "username": current_user.username,
+        "role": current_user.role,
+        "entra_email": current_user.entra_email,
+        "created_at": current_user.created_at,
+    }
 
 
 @router.post("/logout")

@@ -1,32 +1,26 @@
 import { useState, useEffect, useCallback } from "react"
 import Landing from "./pages/Landing"
+import Reviews from "./pages/Reviews"
 import Login from "./pages/Login"
+import api from "./api"
 
 function App() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
-
-  const backend = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000"
+  const [currentPage, setCurrentPage] = useState("landing") // landing or reviews
 
   const checkAuth = useCallback(async () => {
     setLoading(true)
     try {
-      const resp = await fetch(`${backend}/auth/me`, {
-        credentials: "include",
-      })
-      if (resp.ok) {
-        const data = await resp.json().catch(() => null)
-        setUser(data)
-      } else {
-        setUser(null)
-      }
+      const userData = await api.getCurrentUser()
+      setUser(userData)
     } catch (err) {
       console.error("Auth check error:", err)
       setUser(null)
     } finally {
       setLoading(false)
     }
-  }, [backend])
+  }, [])
 
   useEffect(() => {
     checkAuth()
@@ -34,12 +28,24 @@ function App() {
 
   const handleLoginSuccess = async () => {
     // Re-check backend for session/user info after successful login
-    await checkAuth()
+    setLoading(true)
+    try {
+      const userData = await api.getCurrentUser()
+      setUser(userData)
+    } catch (err) {
+      console.error("Auth check error after login:", err)
+      setUser(null)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleLogout = async () => {
     try {
-      await fetch(`${backend}/auth/logout`, { method: "POST", credentials: "include" })
+      await fetch(`${import.meta.env.VITE_BACKEND_URL || "http://localhost:8000"}/auth/logout`, { 
+        method: "POST", 
+        credentials: "include" 
+      })
     } catch (e) {
       console.warn("Logout request failed", e)
     }
@@ -50,10 +56,52 @@ function App() {
     return <div style={{ padding: "20px" }}>Loading...</div>
   }
 
-  return user ? (
-    <Landing user={user} onLogout={handleLogout} />
-  ) : (
-    <Login onLoginSuccess={handleLoginSuccess} />
+  if (!user) {
+    return <Login onLoginSuccess={handleLoginSuccess} />
+  }
+
+  // User is logged in - show Landing or Reviews page
+  return (
+    <div>
+      <nav className="top-nav" style={{ 
+        background: "#333", 
+        color: "white", 
+        padding: "15px 20px", 
+        display: "flex", 
+        gap: "20px",
+        alignItems: "center"
+      }}>
+        <button 
+          onClick={() => setCurrentPage("landing")}
+          style={{
+            background: currentPage === "landing" ? "#667eea" : "transparent",
+            color: "white",
+            border: "none",
+            padding: "8px 15px",
+            borderRadius: "5px",
+            cursor: "pointer"
+          }}
+        >
+          🏠 Courses
+        </button>
+        <button 
+          onClick={() => setCurrentPage("reviews")}
+          style={{
+            background: currentPage === "reviews" ? "#667eea" : "transparent",
+            color: "white",
+            border: "none",
+            padding: "8px 15px",
+            borderRadius: "5px",
+            cursor: "pointer"
+          }}
+        >
+          📝 Reviews
+        </button>
+      </nav>
+      
+      {currentPage === "landing" && <Landing user={user} onLogout={handleLogout} />}
+      {currentPage === "reviews" && <Reviews user={user} />}
+    </div>
   )
 }
 

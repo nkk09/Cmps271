@@ -911,3 +911,425 @@ WHERE users.entra_oid = ?
 2026-02-12 08:06:41,529 | INFO | sqlalchemy.engine.Engine | COMMIT
 2026-02-12 08:06:41,541 | INFO | app.api.auth | OTP verified and user logged in: KeenEagle6099 (rhm31@mail.aub.edu)
 2026-02-12 08:06:41,554 | DEBUG | app.api.auth | Me called, user resolved
+2026-02-21 12:07:00,255 | INFO | app.main | Application startup complete
+2026-02-21 12:07:00,326 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-21 12:07:00,327 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("users")
+2026-02-21 12:07:00,327 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 12:07:00,331 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("otps")
+2026-02-21 12:07:00,332 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 12:07:00,333 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("courses")
+2026-02-21 12:07:00,333 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 12:07:00,335 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("professors")
+2026-02-21 12:07:00,335 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 12:07:00,336 | INFO | sqlalchemy.engine.Engine | PRAGMA temp.table_info("professors")
+2026-02-21 12:07:00,336 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 12:07:00,337 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("course_sections")
+2026-02-21 12:07:00,337 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 12:07:00,338 | INFO | sqlalchemy.engine.Engine | PRAGMA temp.table_info("course_sections")
+2026-02-21 12:07:00,338 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 12:07:00,339 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("reviews")
+2026-02-21 12:07:00,339 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 12:07:00,339 | INFO | sqlalchemy.engine.Engine | PRAGMA temp.table_info("reviews")
+2026-02-21 12:07:00,339 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 12:07:00,339 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("review_interactions")
+2026-02-21 12:07:00,339 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 12:07:00,339 | INFO | sqlalchemy.engine.Engine | PRAGMA temp.table_info("review_interactions")
+2026-02-21 12:07:00,339 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 12:07:00,339 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("moderation_logs")
+2026-02-21 12:07:00,339 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 12:07:00,339 | INFO | sqlalchemy.engine.Engine | PRAGMA temp.table_info("moderation_logs")
+2026-02-21 12:07:00,339 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 12:07:00,339 | INFO | sqlalchemy.engine.Engine | 
+CREATE TABLE professors (
+	id INTEGER NOT NULL, 
+	entra_oid VARCHAR(255), 
+	first_name VARCHAR(100) NOT NULL, 
+	last_name VARCHAR(100) NOT NULL, 
+	email VARCHAR(255), 
+	department VARCHAR(100), 
+	office VARCHAR(100), 
+	phone VARCHAR(20), 
+	bio VARCHAR(500), 
+	status VARCHAR(20) NOT NULL, 
+	created_at DATETIME NOT NULL, 
+	updated_at DATETIME NOT NULL, 
+	PRIMARY KEY (id)
+)
+
+
+2026-02-21 12:07:00,339 | INFO | sqlalchemy.engine.Engine | [no key 0.00094s] ()
+2026-02-21 12:07:00,468 | INFO | sqlalchemy.engine.Engine | CREATE UNIQUE INDEX ix_professors_entra_oid ON professors (entra_oid)
+2026-02-21 12:07:00,469 | INFO | sqlalchemy.engine.Engine | [no key 0.00071s] ()
+2026-02-21 12:07:00,552 | INFO | sqlalchemy.engine.Engine | CREATE INDEX ix_professors_email ON professors (email)
+2026-02-21 12:07:00,557 | INFO | sqlalchemy.engine.Engine | [no key 0.00516s] ()
+2026-02-21 12:07:00,637 | INFO | sqlalchemy.engine.Engine | CREATE INDEX ix_professors_department ON professors (department)
+2026-02-21 12:07:00,638 | INFO | sqlalchemy.engine.Engine | [no key 0.00124s] ()
+2026-02-21 12:07:00,737 | INFO | sqlalchemy.engine.Engine | 
+CREATE TABLE course_sections (
+	id INTEGER NOT NULL, 
+	course_id INTEGER NOT NULL, 
+	professor_id INTEGER NOT NULL, 
+	section_number VARCHAR(10) NOT NULL, 
+	semester VARCHAR(20) NOT NULL, 
+	year INTEGER NOT NULL, 
+	time VARCHAR(100), 
+	location VARCHAR(100), 
+	credits INTEGER, 
+	status VARCHAR(20) NOT NULL, 
+	created_at DATETIME NOT NULL, 
+	updated_at DATETIME NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(course_id) REFERENCES courses (id), 
+	FOREIGN KEY(professor_id) REFERENCES professors (id)
+)
+
+
+2026-02-21 12:07:00,737 | INFO | sqlalchemy.engine.Engine | [no key 0.00081s] ()
+2026-02-21 12:07:00,821 | INFO | sqlalchemy.engine.Engine | CREATE INDEX ix_course_sections_semester ON course_sections (semester)
+2026-02-21 12:07:00,821 | INFO | sqlalchemy.engine.Engine | [no key 0.00088s] ()
+2026-02-21 12:07:00,902 | INFO | sqlalchemy.engine.Engine | CREATE INDEX ix_course_sections_professor_id ON course_sections (professor_id)
+2026-02-21 12:07:00,902 | INFO | sqlalchemy.engine.Engine | [no key 0.00057s] ()
+2026-02-21 12:07:00,978 | INFO | sqlalchemy.engine.Engine | CREATE INDEX ix_course_sections_year ON course_sections (year)
+2026-02-21 12:07:00,978 | INFO | sqlalchemy.engine.Engine | [no key 0.00069s] ()
+2026-02-21 12:07:01,052 | INFO | sqlalchemy.engine.Engine | CREATE INDEX ix_course_sections_course_id ON course_sections (course_id)
+2026-02-21 12:07:01,066 | INFO | sqlalchemy.engine.Engine | [no key 0.00059s] ()
+2026-02-21 12:07:01,184 | INFO | sqlalchemy.engine.Engine | 
+CREATE TABLE reviews (
+	id INTEGER NOT NULL, 
+	user_id INTEGER NOT NULL, 
+	course_id INTEGER NOT NULL, 
+	professor_id INTEGER NOT NULL, 
+	section_id INTEGER, 
+	title VARCHAR(200) NOT NULL, 
+	content TEXT NOT NULL, 
+	rating FLOAT NOT NULL, 
+	attributes VARCHAR(500), 
+	status VARCHAR(20) NOT NULL, 
+	moderator_id INTEGER, 
+	moderation_reason VARCHAR(500), 
+	moderated_at DATETIME, 
+	likes_count INTEGER NOT NULL, 
+	dislikes_count INTEGER NOT NULL, 
+	created_at DATETIME NOT NULL, 
+	updated_at DATETIME NOT NULL, 
+	deleted_at DATETIME, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(user_id) REFERENCES users (id), 
+	FOREIGN KEY(course_id) REFERENCES courses (id), 
+	FOREIGN KEY(professor_id) REFERENCES professors (id), 
+	FOREIGN KEY(section_id) REFERENCES course_sections (id), 
+	FOREIGN KEY(moderator_id) REFERENCES users (id)
+)
+
+
+2026-02-21 12:07:01,184 | INFO | sqlalchemy.engine.Engine | [no key 0.00114s] ()
+2026-02-21 12:07:01,270 | INFO | sqlalchemy.engine.Engine | CREATE INDEX ix_reviews_status ON reviews (status)
+2026-02-21 12:07:01,270 | INFO | sqlalchemy.engine.Engine | [no key 0.00051s] ()
+2026-02-21 12:07:01,354 | INFO | sqlalchemy.engine.Engine | CREATE INDEX ix_reviews_user_id ON reviews (user_id)
+2026-02-21 12:07:01,354 | INFO | sqlalchemy.engine.Engine | [no key 0.00102s] ()
+2026-02-21 12:07:01,451 | INFO | sqlalchemy.engine.Engine | CREATE INDEX ix_reviews_section_id ON reviews (section_id)
+2026-02-21 12:07:01,462 | INFO | sqlalchemy.engine.Engine | [no key 0.00956s] ()
+2026-02-21 12:07:01,571 | INFO | sqlalchemy.engine.Engine | CREATE INDEX ix_reviews_professor_id ON reviews (professor_id)
+2026-02-21 12:07:01,571 | INFO | sqlalchemy.engine.Engine | [no key 0.00141s] ()
+2026-02-21 12:07:01,662 | INFO | sqlalchemy.engine.Engine | CREATE INDEX ix_reviews_created_at ON reviews (created_at)
+2026-02-21 12:07:01,662 | INFO | sqlalchemy.engine.Engine | [no key 0.00051s] ()
+2026-02-21 12:07:01,749 | INFO | sqlalchemy.engine.Engine | CREATE INDEX ix_reviews_course_id ON reviews (course_id)
+2026-02-21 12:07:01,751 | INFO | sqlalchemy.engine.Engine | [no key 0.00081s] ()
+2026-02-21 12:07:01,835 | INFO | sqlalchemy.engine.Engine | 
+CREATE TABLE review_interactions (
+	id INTEGER NOT NULL, 
+	review_id INTEGER NOT NULL, 
+	user_id INTEGER NOT NULL, 
+	interaction_type VARCHAR(20) NOT NULL, 
+	created_at DATETIME NOT NULL, 
+	updated_at DATETIME NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(review_id) REFERENCES reviews (id), 
+	FOREIGN KEY(user_id) REFERENCES users (id)
+)
+
+
+2026-02-21 12:07:01,836 | INFO | sqlalchemy.engine.Engine | [no key 0.00104s] ()
+2026-02-21 12:07:01,920 | INFO | sqlalchemy.engine.Engine | CREATE INDEX ix_review_interactions_user_id ON review_interactions (user_id)
+2026-02-21 12:07:01,921 | INFO | sqlalchemy.engine.Engine | [no key 0.00171s] ()
+2026-02-21 12:07:02,002 | INFO | sqlalchemy.engine.Engine | CREATE INDEX ix_review_interactions_review_id ON review_interactions (review_id)
+2026-02-21 12:07:02,002 | INFO | sqlalchemy.engine.Engine | [no key 0.00096s] ()
+2026-02-21 12:07:02,090 | INFO | sqlalchemy.engine.Engine | 
+CREATE TABLE moderation_logs (
+	id INTEGER NOT NULL, 
+	moderator_id INTEGER NOT NULL, 
+	user_id INTEGER, 
+	review_id INTEGER, 
+	action_type VARCHAR(50) NOT NULL, 
+	reason VARCHAR(500), 
+	details TEXT, 
+	status VARCHAR(20) NOT NULL, 
+	created_at DATETIME NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(moderator_id) REFERENCES users (id), 
+	FOREIGN KEY(user_id) REFERENCES users (id), 
+	FOREIGN KEY(review_id) REFERENCES reviews (id)
+)
+
+
+2026-02-21 12:07:02,091 | INFO | sqlalchemy.engine.Engine | [no key 0.00086s] ()
+2026-02-21 12:07:02,251 | INFO | sqlalchemy.engine.Engine | CREATE INDEX ix_moderation_logs_user_id ON moderation_logs (user_id)
+2026-02-21 12:07:02,253 | INFO | sqlalchemy.engine.Engine | [no key 0.00173s] ()
+2026-02-21 12:07:02,336 | INFO | sqlalchemy.engine.Engine | CREATE INDEX ix_moderation_logs_review_id ON moderation_logs (review_id)
+2026-02-21 12:07:02,337 | INFO | sqlalchemy.engine.Engine | [no key 0.00058s] ()
+2026-02-21 12:07:02,419 | INFO | sqlalchemy.engine.Engine | CREATE INDEX ix_moderation_logs_created_at ON moderation_logs (created_at)
+2026-02-21 12:07:02,419 | INFO | sqlalchemy.engine.Engine | [no key 0.00059s] ()
+2026-02-21 12:07:02,500 | INFO | sqlalchemy.engine.Engine | CREATE INDEX ix_moderation_logs_action_type ON moderation_logs (action_type)
+2026-02-21 12:07:02,500 | INFO | sqlalchemy.engine.Engine | [no key 0.00059s] ()
+2026-02-21 12:07:02,584 | INFO | sqlalchemy.engine.Engine | CREATE INDEX ix_moderation_logs_moderator_id ON moderation_logs (moderator_id)
+2026-02-21 12:07:02,584 | INFO | sqlalchemy.engine.Engine | [no key 0.00047s] ()
+2026-02-21 12:07:02,667 | INFO | sqlalchemy.engine.Engine | COMMIT
+2026-02-21 12:07:02,667 | INFO | app.main | Database initialized successfully
+2026-02-21 12:07:02,693 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-21 12:07:02,693 | INFO | sqlalchemy.engine.Engine | DELETE FROM otps WHERE otps.expires_at <= ?
+2026-02-21 12:07:02,693 | INFO | sqlalchemy.engine.Engine | [generated in 0.00047s] ('2026-02-21 10:07:02.693366',)
+2026-02-21 12:07:02,701 | INFO | sqlalchemy.engine.Engine | COMMIT
+2026-02-21 12:07:02,782 | INFO | app.core.tasks | Cleaned up 1 expired OTP records
+2026-02-21 12:07:04,293 | INFO | app.main | Application startup complete
+2026-02-21 12:07:04,295 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-21 12:07:04,295 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("users")
+2026-02-21 12:07:04,299 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 12:07:04,301 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("otps")
+2026-02-21 12:07:04,302 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 12:07:04,303 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("courses")
+2026-02-21 12:07:04,303 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 12:07:04,304 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("professors")
+2026-02-21 12:07:04,304 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 12:07:04,305 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("course_sections")
+2026-02-21 12:07:04,305 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 12:07:04,307 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("reviews")
+2026-02-21 12:07:04,308 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 12:07:04,308 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("review_interactions")
+2026-02-21 12:07:04,309 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 12:07:04,310 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("moderation_logs")
+2026-02-21 12:07:04,310 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 12:07:04,310 | INFO | sqlalchemy.engine.Engine | COMMIT
+2026-02-21 12:07:04,311 | INFO | app.main | Database initialized successfully
+2026-02-21 12:07:04,344 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-21 12:07:04,345 | INFO | sqlalchemy.engine.Engine | DELETE FROM otps WHERE otps.expires_at <= ?
+2026-02-21 12:07:04,345 | INFO | sqlalchemy.engine.Engine | [generated in 0.00047s] ('2026-02-21 10:07:04.343030',)
+2026-02-21 12:07:04,345 | INFO | sqlalchemy.engine.Engine | COMMIT
+2026-02-21 12:08:48,468 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-21 12:08:48,470 | INFO | sqlalchemy.engine.Engine | DELETE FROM otps WHERE otps.expires_at <= ?
+2026-02-21 12:08:48,471 | INFO | sqlalchemy.engine.Engine | [cached since 104.1s ago] ('2026-02-21 10:08:48.467841',)
+2026-02-21 12:08:48,473 | INFO | sqlalchemy.engine.Engine | COMMIT
+2026-02-21 12:08:48,475 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-21 12:08:48,479 | INFO | sqlalchemy.engine.Engine | INSERT INTO otps (email, code, attempts, created_at, expires_at, verified_at) VALUES (?, ?, ?, ?, ?, ?)
+2026-02-21 12:08:48,480 | INFO | sqlalchemy.engine.Engine | [generated in 0.00133s] ('nkk09@mail.aub.edu', '290520', 0, '2026-02-21 10:08:48.478494', '2026-02-21 10:18:48.474299', None)
+2026-02-21 12:08:48,484 | INFO | sqlalchemy.engine.Engine | COMMIT
+2026-02-21 12:08:48,561 | INFO | app.api.auth | OTP code for nkk09@mail.aub.edu: 290520 (expires in 10 min)
+2026-02-21 12:08:50,444 | INFO | app.api.auth | OTP email sent successfully to nkk09@mail.aub.edu
+2026-02-21 12:08:50,445 | INFO | app.api.auth | OTP created for nkk09@mail.aub.edu, expires at 2026-02-21T10:18:48.474299
+2026-02-21 12:09:09,164 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-21 12:09:09,164 | INFO | sqlalchemy.engine.Engine | SELECT otps.id AS otps_id, otps.email AS otps_email, otps.code AS otps_code, otps.attempts AS otps_attempts, otps.created_at AS otps_created_at, otps.expires_at AS otps_expires_at, otps.verified_at AS otps_verified_at 
+FROM otps 
+WHERE otps.email = ? AND otps.expires_at > ? ORDER BY otps.created_at DESC
+ LIMIT ? OFFSET ?
+2026-02-21 12:09:09,164 | INFO | sqlalchemy.engine.Engine | [generated in 0.00082s] ('nkk09@mail.aub.edu', '2026-02-21 10:09:09.164508', 1, 0)
+2026-02-21 12:09:09,275 | INFO | sqlalchemy.engine.Engine | SELECT users.id AS users_id, users.username AS users_username, users.entra_oid AS users_entra_oid, users.entra_email AS users_entra_email, users.role AS users_role, users.status AS users_status, users.created_at AS users_created_at, users.last_login AS users_last_login 
+FROM users 
+WHERE users.entra_oid = ?
+ LIMIT ? OFFSET ?
+2026-02-21 12:09:09,276 | INFO | sqlalchemy.engine.Engine | [generated in 0.00132s] ('local:nkk09@mail.aub.edu', 1, 0)
+2026-02-21 12:09:09,280 | INFO | sqlalchemy.engine.Engine | SELECT users.id AS users_id, users.username AS users_username, users.entra_oid AS users_entra_oid, users.entra_email AS users_entra_email, users.role AS users_role, users.status AS users_status, users.created_at AS users_created_at, users.last_login AS users_last_login 
+FROM users 
+WHERE users.username = ?
+ LIMIT ? OFFSET ?
+2026-02-21 12:09:09,280 | INFO | sqlalchemy.engine.Engine | [generated in 0.00078s] ('RadiantLight7210', 1, 0)
+2026-02-21 12:09:09,283 | INFO | sqlalchemy.engine.Engine | INSERT INTO users (username, entra_oid, entra_email, role, status, created_at, last_login) VALUES (?, ?, ?, ?, ?, ?, ?)
+2026-02-21 12:09:09,283 | INFO | sqlalchemy.engine.Engine | [generated in 0.00107s] ('RadiantLight7210', 'local:nkk09@mail.aub.edu', 'nkk09@mail.aub.edu', 'student', 'active', '2026-02-21 10:09:09.283455', '2026-02-21 10:09:09.281725')
+2026-02-21 12:09:09,283 | INFO | sqlalchemy.engine.Engine | COMMIT
+2026-02-21 12:09:09,380 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-21 12:09:09,380 | INFO | sqlalchemy.engine.Engine | UPDATE otps SET verified_at=? WHERE otps.id = ?
+2026-02-21 12:09:09,392 | INFO | sqlalchemy.engine.Engine | [generated in 0.00066s] ('2026-02-21 10:09:09.380722', 1)
+2026-02-21 12:09:09,395 | INFO | sqlalchemy.engine.Engine | COMMIT
+2026-02-21 12:09:09,479 | INFO | app.api.auth | OTP verified and user logged in: RadiantLight7210 (nkk09@mail.aub.edu)
+2026-02-21 12:09:09,487 | DEBUG | app.api.auth | Me called, user resolved
+2026-02-21 13:53:12,609 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-21 13:53:12,611 | INFO | sqlalchemy.engine.Engine | DELETE FROM otps WHERE otps.expires_at <= ?
+2026-02-21 13:53:12,613 | INFO | sqlalchemy.engine.Engine | [cached since 6368s ago] ('2026-02-21 11:53:12.605353',)
+2026-02-21 13:53:12,613 | INFO | sqlalchemy.engine.Engine | COMMIT
+2026-02-21 13:53:12,826 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-21 13:53:12,826 | INFO | sqlalchemy.engine.Engine | INSERT INTO otps (email, code, attempts, created_at, expires_at, verified_at) VALUES (?, ?, ?, ?, ?, ?)
+2026-02-21 13:53:12,826 | INFO | sqlalchemy.engine.Engine | [cached since 6264s ago] ('nkk09@mail.aub.edu', '417187', 0, '2026-02-21 11:53:12.826792', '2026-02-21 12:03:12.826792', None)
+2026-02-21 13:53:12,826 | INFO | sqlalchemy.engine.Engine | COMMIT
+2026-02-21 13:53:12,909 | INFO | app.api.auth | OTP code for nkk09@mail.aub.edu: 417187 (expires in 10 min)
+2026-02-21 13:53:15,899 | INFO | app.api.auth | OTP email sent successfully to nkk09@mail.aub.edu
+2026-02-21 13:53:15,899 | INFO | app.api.auth | OTP created for nkk09@mail.aub.edu, expires at 2026-02-21T12:03:12.826792
+2026-02-21 13:53:35,868 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-21 13:53:35,869 | INFO | sqlalchemy.engine.Engine | SELECT otps.id AS otps_id, otps.email AS otps_email, otps.code AS otps_code, otps.attempts AS otps_attempts, otps.created_at AS otps_created_at, otps.expires_at AS otps_expires_at, otps.verified_at AS otps_verified_at 
+FROM otps 
+WHERE otps.email = ? AND otps.expires_at > ? ORDER BY otps.created_at DESC
+ LIMIT ? OFFSET ?
+2026-02-21 13:53:35,870 | INFO | sqlalchemy.engine.Engine | [cached since 6267s ago] ('nkk09@mail.aub.edu', '2026-02-21 11:53:35.868647', 1, 0)
+2026-02-21 13:53:35,875 | INFO | sqlalchemy.engine.Engine | SELECT users.id AS users_id, users.username AS users_username, users.entra_oid AS users_entra_oid, users.entra_email AS users_entra_email, users.role AS users_role, users.status AS users_status, users.created_at AS users_created_at, users.last_login AS users_last_login 
+FROM users 
+WHERE users.entra_oid = ?
+ LIMIT ? OFFSET ?
+2026-02-21 13:53:35,875 | INFO | sqlalchemy.engine.Engine | [cached since 6267s ago] ('local:nkk09@mail.aub.edu', 1, 0)
+2026-02-21 13:53:35,876 | INFO | sqlalchemy.engine.Engine | UPDATE users SET last_login=? WHERE users.id = ?
+2026-02-21 13:53:35,876 | INFO | sqlalchemy.engine.Engine | [generated in 0.00091s] ('2026-02-21 11:53:35.876685', 2)
+2026-02-21 13:53:35,882 | INFO | sqlalchemy.engine.Engine | COMMIT
+2026-02-21 13:53:36,128 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-21 13:53:36,128 | INFO | sqlalchemy.engine.Engine | UPDATE otps SET verified_at=? WHERE otps.id = ?
+2026-02-21 13:53:36,128 | INFO | sqlalchemy.engine.Engine | [cached since 6267s ago] ('2026-02-21 11:53:36.128379', 1)
+2026-02-21 13:53:36,128 | INFO | sqlalchemy.engine.Engine | COMMIT
+2026-02-21 13:53:36,212 | INFO | app.api.auth | OTP verified and user logged in: RadiantLight7210 (nkk09@mail.aub.edu)
+2026-02-21 13:56:02,869 | INFO | app.main | Application startup complete
+2026-02-21 13:56:02,874 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-21 13:56:02,874 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("users")
+2026-02-21 13:56:02,874 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 13:56:02,877 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("otps")
+2026-02-21 13:56:02,878 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 13:56:02,879 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("courses")
+2026-02-21 13:56:02,879 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 13:56:02,879 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("professors")
+2026-02-21 13:56:02,880 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 13:56:02,880 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("course_sections")
+2026-02-21 13:56:02,880 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 13:56:02,881 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("reviews")
+2026-02-21 13:56:02,881 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 13:56:02,882 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("review_interactions")
+2026-02-21 13:56:02,882 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 13:56:02,882 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("moderation_logs")
+2026-02-21 13:56:02,882 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 13:56:02,882 | INFO | sqlalchemy.engine.Engine | COMMIT
+2026-02-21 13:56:02,882 | INFO | app.main | Database initialized successfully
+2026-02-21 13:56:02,909 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-21 13:56:02,913 | INFO | sqlalchemy.engine.Engine | DELETE FROM otps WHERE otps.expires_at <= ?
+2026-02-21 13:56:02,913 | INFO | sqlalchemy.engine.Engine | [generated in 0.00040s] ('2026-02-21 11:56:02.909590',)
+2026-02-21 13:56:02,914 | INFO | sqlalchemy.engine.Engine | COMMIT
+2026-02-21 13:56:02,930 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-21 13:56:02,933 | INFO | sqlalchemy.engine.Engine | SELECT users.id AS users_id, users.username AS users_username, users.entra_oid AS users_entra_oid, users.entra_email AS users_entra_email, users.role AS users_role, users.status AS users_status, users.created_at AS users_created_at, users.last_login AS users_last_login 
+FROM users 
+WHERE users.id = ?
+ LIMIT ? OFFSET ?
+2026-02-21 13:56:02,933 | INFO | sqlalchemy.engine.Engine | [generated in 0.00053s] (2, 1, 0)
+2026-02-21 13:56:03,037 | INFO | sqlalchemy.engine.Engine | ROLLBACK
+2026-02-21 13:56:24,045 | INFO | app.main | Application startup complete
+2026-02-21 13:56:24,057 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-21 13:56:24,059 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("users")
+2026-02-21 13:56:24,059 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 13:56:24,060 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("otps")
+2026-02-21 13:56:24,060 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 13:56:24,061 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("courses")
+2026-02-21 13:56:24,061 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 13:56:24,062 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("professors")
+2026-02-21 13:56:24,063 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 13:56:24,063 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("course_sections")
+2026-02-21 13:56:24,063 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 13:56:24,064 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("reviews")
+2026-02-21 13:56:24,064 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 13:56:24,065 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("review_interactions")
+2026-02-21 13:56:24,065 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 13:56:24,065 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("moderation_logs")
+2026-02-21 13:56:24,065 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-02-21 13:56:24,067 | INFO | sqlalchemy.engine.Engine | COMMIT
+2026-02-21 13:56:24,067 | INFO | app.main | Database initialized successfully
+2026-02-21 13:56:24,099 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-21 13:56:24,099 | INFO | sqlalchemy.engine.Engine | DELETE FROM otps WHERE otps.expires_at <= ?
+2026-02-21 13:56:24,099 | INFO | sqlalchemy.engine.Engine | [generated in 0.00049s] ('2026-02-21 11:56:24.099219',)
+2026-02-21 13:56:24,099 | INFO | sqlalchemy.engine.Engine | COMMIT
+2026-02-21 14:00:53,834 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-21 14:00:53,852 | INFO | sqlalchemy.engine.Engine | SELECT users.id AS users_id, users.username AS users_username, users.entra_oid AS users_entra_oid, users.entra_email AS users_entra_email, users.role AS users_role, users.status AS users_status, users.created_at AS users_created_at, users.last_login AS users_last_login 
+FROM users 
+WHERE users.id = ?
+ LIMIT ? OFFSET ?
+2026-02-21 14:00:53,852 | INFO | sqlalchemy.engine.Engine | [generated in 0.00075s] (2, 1, 0)
+2026-02-21 14:00:53,858 | INFO | sqlalchemy.engine.Engine | ROLLBACK
+2026-02-21 14:00:53,861 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-21 14:00:53,862 | INFO | sqlalchemy.engine.Engine | SELECT users.id AS users_id, users.username AS users_username, users.entra_oid AS users_entra_oid, users.entra_email AS users_entra_email, users.role AS users_role, users.status AS users_status, users.created_at AS users_created_at, users.last_login AS users_last_login 
+FROM users 
+WHERE users.id = ?
+ LIMIT ? OFFSET ?
+2026-02-21 14:00:53,863 | INFO | sqlalchemy.engine.Engine | [cached since 0.01115s ago] (2, 1, 0)
+2026-02-21 14:00:53,867 | INFO | sqlalchemy.engine.Engine | ROLLBACK
+2026-02-21 14:01:41,480 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-21 14:01:41,481 | INFO | sqlalchemy.engine.Engine | SELECT users.id AS users_id, users.username AS users_username, users.entra_oid AS users_entra_oid, users.entra_email AS users_entra_email, users.role AS users_role, users.status AS users_status, users.created_at AS users_created_at, users.last_login AS users_last_login 
+FROM users 
+WHERE users.id = ?
+ LIMIT ? OFFSET ?
+2026-02-21 14:01:41,482 | INFO | sqlalchemy.engine.Engine | [cached since 47.63s ago] (2, 1, 0)
+2026-02-21 14:01:41,491 | INFO | sqlalchemy.engine.Engine | SELECT professors.id AS professors_id, professors.entra_oid AS professors_entra_oid, professors.first_name AS professors_first_name, professors.last_name AS professors_last_name, professors.email AS professors_email, professors.department AS professors_department, professors.office AS professors_office, professors.phone AS professors_phone, professors.bio AS professors_bio, professors.status AS professors_status, professors.created_at AS professors_created_at, professors.updated_at AS professors_updated_at 
+FROM professors 
+WHERE professors.status = ? ORDER BY professors.last_name, professors.first_name
+2026-02-21 14:01:41,492 | INFO | sqlalchemy.engine.Engine | [generated in 0.00094s] ('active',)
+2026-02-21 14:01:43,017 | INFO | sqlalchemy.engine.Engine | ROLLBACK
+2026-02-21 14:01:43,029 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-21 14:01:43,029 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-21 14:01:43,029 | INFO | sqlalchemy.engine.Engine | SELECT users.id AS users_id, users.username AS users_username, users.entra_oid AS users_entra_oid, users.entra_email AS users_entra_email, users.role AS users_role, users.status AS users_status, users.created_at AS users_created_at, users.last_login AS users_last_login 
+FROM users 
+WHERE users.id = ?
+ LIMIT ? OFFSET ?
+2026-02-21 14:01:43,029 | INFO | sqlalchemy.engine.Engine | SELECT users.id AS users_id, users.username AS users_username, users.entra_oid AS users_entra_oid, users.entra_email AS users_entra_email, users.role AS users_role, users.status AS users_status, users.created_at AS users_created_at, users.last_login AS users_last_login 
+FROM users 
+WHERE users.id = ?
+ LIMIT ? OFFSET ?
+2026-02-21 14:01:43,029 | INFO | sqlalchemy.engine.Engine | [cached since 49.19s ago] (2, 1, 0)
+2026-02-21 14:01:43,029 | INFO | sqlalchemy.engine.Engine | [cached since 49.19s ago] (2, 1, 0)
+2026-02-21 14:01:43,040 | INFO | sqlalchemy.engine.Engine | SELECT professors.id AS professors_id, professors.entra_oid AS professors_entra_oid, professors.first_name AS professors_first_name, professors.last_name AS professors_last_name, professors.email AS professors_email, professors.department AS professors_department, professors.office AS professors_office, professors.phone AS professors_phone, professors.bio AS professors_bio, professors.status AS professors_status, professors.created_at AS professors_created_at, professors.updated_at AS professors_updated_at 
+FROM professors 
+WHERE professors.status = ? ORDER BY professors.last_name, professors.first_name
+2026-02-21 14:01:43,040 | INFO | sqlalchemy.engine.Engine | [cached since 1.551s ago] ('active',)
+2026-02-21 14:01:43,046 | INFO | sqlalchemy.engine.Engine | SELECT course_sections.id AS course_sections_id, course_sections.course_id AS course_sections_course_id, course_sections.professor_id AS course_sections_professor_id, course_sections.section_number AS course_sections_section_number, course_sections.semester AS course_sections_semester, course_sections.year AS course_sections_year, course_sections.time AS course_sections_time, course_sections.location AS course_sections_location, course_sections.credits AS course_sections_credits, course_sections.status AS course_sections_status, course_sections.created_at AS course_sections_created_at, course_sections.updated_at AS course_sections_updated_at 
+FROM course_sections ORDER BY course_sections.semester DESC, course_sections.year DESC, course_sections.course_id
+2026-02-21 14:01:43,049 | INFO | sqlalchemy.engine.Engine | [generated in 0.00398s] ()
+2026-02-21 14:01:43,049 | INFO | sqlalchemy.engine.Engine | ROLLBACK
+2026-02-21 14:01:43,053 | INFO | sqlalchemy.engine.Engine | ROLLBACK
+2026-02-21 14:01:43,061 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-21 14:01:43,061 | INFO | sqlalchemy.engine.Engine | SELECT users.id AS users_id, users.username AS users_username, users.entra_oid AS users_entra_oid, users.entra_email AS users_entra_email, users.role AS users_role, users.status AS users_status, users.created_at AS users_created_at, users.last_login AS users_last_login 
+FROM users 
+WHERE users.id = ?
+ LIMIT ? OFFSET ?
+2026-02-21 14:01:43,062 | INFO | sqlalchemy.engine.Engine | [cached since 49.21s ago] (2, 1, 0)
+2026-02-21 14:01:43,064 | INFO | sqlalchemy.engine.Engine | SELECT course_sections.id AS course_sections_id, course_sections.course_id AS course_sections_course_id, course_sections.professor_id AS course_sections_professor_id, course_sections.section_number AS course_sections_section_number, course_sections.semester AS course_sections_semester, course_sections.year AS course_sections_year, course_sections.time AS course_sections_time, course_sections.location AS course_sections_location, course_sections.credits AS course_sections_credits, course_sections.status AS course_sections_status, course_sections.created_at AS course_sections_created_at, course_sections.updated_at AS course_sections_updated_at 
+FROM course_sections ORDER BY course_sections.semester DESC, course_sections.year DESC, course_sections.course_id
+2026-02-21 14:01:43,064 | INFO | sqlalchemy.engine.Engine | [cached since 0.01855s ago] ()
+2026-02-21 14:01:43,067 | INFO | sqlalchemy.engine.Engine | ROLLBACK
+2026-02-21 14:01:43,608 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-21 14:01:43,608 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-21 14:01:43,609 | INFO | sqlalchemy.engine.Engine | SELECT users.id AS users_id, users.username AS users_username, users.entra_oid AS users_entra_oid, users.entra_email AS users_entra_email, users.role AS users_role, users.status AS users_status, users.created_at AS users_created_at, users.last_login AS users_last_login 
+FROM users 
+WHERE users.id = ?
+ LIMIT ? OFFSET ?
+2026-02-21 14:01:43,610 | INFO | sqlalchemy.engine.Engine | SELECT users.id AS users_id, users.username AS users_username, users.entra_oid AS users_entra_oid, users.entra_email AS users_entra_email, users.role AS users_role, users.status AS users_status, users.created_at AS users_created_at, users.last_login AS users_last_login 
+FROM users 
+WHERE users.id = ?
+ LIMIT ? OFFSET ?
+2026-02-21 14:01:43,610 | INFO | sqlalchemy.engine.Engine | [cached since 49.76s ago] (2, 1, 0)
+2026-02-21 14:01:43,611 | INFO | sqlalchemy.engine.Engine | [cached since 49.76s ago] (2, 1, 0)
+2026-02-21 14:01:43,615 | INFO | sqlalchemy.engine.Engine | SELECT professors.id AS professors_id, professors.entra_oid AS professors_entra_oid, professors.first_name AS professors_first_name, professors.last_name AS professors_last_name, professors.email AS professors_email, professors.department AS professors_department, professors.office AS professors_office, professors.phone AS professors_phone, professors.bio AS professors_bio, professors.status AS professors_status, professors.created_at AS professors_created_at, professors.updated_at AS professors_updated_at 
+FROM professors 
+WHERE professors.status = ? ORDER BY professors.last_name, professors.first_name
+2026-02-21 14:01:43,615 | INFO | sqlalchemy.engine.Engine | SELECT course_sections.id AS course_sections_id, course_sections.course_id AS course_sections_course_id, course_sections.professor_id AS course_sections_professor_id, course_sections.section_number AS course_sections_section_number, course_sections.semester AS course_sections_semester, course_sections.year AS course_sections_year, course_sections.time AS course_sections_time, course_sections.location AS course_sections_location, course_sections.credits AS course_sections_credits, course_sections.status AS course_sections_status, course_sections.created_at AS course_sections_created_at, course_sections.updated_at AS course_sections_updated_at 
+FROM course_sections ORDER BY course_sections.semester DESC, course_sections.year DESC, course_sections.course_id
+2026-02-21 14:01:43,615 | INFO | sqlalchemy.engine.Engine | [cached since 2.126s ago] ('active',)
+2026-02-21 14:01:43,615 | INFO | sqlalchemy.engine.Engine | [cached since 0.5708s ago] ()
+2026-02-21 14:01:43,620 | INFO | sqlalchemy.engine.Engine | ROLLBACK
+2026-02-21 14:01:43,620 | INFO | sqlalchemy.engine.Engine | ROLLBACK
+2026-02-21 14:01:43,626 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-21 14:01:43,627 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-02-21 14:01:43,628 | INFO | sqlalchemy.engine.Engine | SELECT users.id AS users_id, users.username AS users_username, users.entra_oid AS users_entra_oid, users.entra_email AS users_entra_email, users.role AS users_role, users.status AS users_status, users.created_at AS users_created_at, users.last_login AS users_last_login 
+FROM users 
+WHERE users.id = ?
+ LIMIT ? OFFSET ?
+2026-02-21 14:01:43,628 | INFO | sqlalchemy.engine.Engine | SELECT users.id AS users_id, users.username AS users_username, users.entra_oid AS users_entra_oid, users.entra_email AS users_entra_email, users.role AS users_role, users.status AS users_status, users.created_at AS users_created_at, users.last_login AS users_last_login 
+FROM users 
+WHERE users.id = ?
+ LIMIT ? OFFSET ?
+2026-02-21 14:01:43,629 | INFO | sqlalchemy.engine.Engine | [cached since 49.78s ago] (2, 1, 0)
+2026-02-21 14:01:43,630 | INFO | sqlalchemy.engine.Engine | [cached since 49.78s ago] (2, 1, 0)
+2026-02-21 14:01:43,632 | INFO | sqlalchemy.engine.Engine | SELECT course_sections.id AS course_sections_id, course_sections.course_id AS course_sections_course_id, course_sections.professor_id AS course_sections_professor_id, course_sections.section_number AS course_sections_section_number, course_sections.semester AS course_sections_semester, course_sections.year AS course_sections_year, course_sections.time AS course_sections_time, course_sections.location AS course_sections_location, course_sections.credits AS course_sections_credits, course_sections.status AS course_sections_status, course_sections.created_at AS course_sections_created_at, course_sections.updated_at AS course_sections_updated_at 
+FROM course_sections ORDER BY course_sections.semester DESC, course_sections.year DESC, course_sections.course_id
+2026-02-21 14:01:43,634 | INFO | sqlalchemy.engine.Engine | SELECT professors.id AS professors_id, professors.entra_oid AS professors_entra_oid, professors.first_name AS professors_first_name, professors.last_name AS professors_last_name, professors.email AS professors_email, professors.department AS professors_department, professors.office AS professors_office, professors.phone AS professors_phone, professors.bio AS professors_bio, professors.status AS professors_status, professors.created_at AS professors_created_at, professors.updated_at AS professors_updated_at 
+FROM professors 
+WHERE professors.status = ? ORDER BY professors.last_name, professors.first_name
+2026-02-21 14:01:43,634 | INFO | sqlalchemy.engine.Engine | [cached since 0.5887s ago] ()
+2026-02-21 14:01:43,635 | INFO | sqlalchemy.engine.Engine | [cached since 2.144s ago] ('active',)
+2026-02-21 14:01:43,638 | INFO | sqlalchemy.engine.Engine | ROLLBACK
+2026-02-21 14:01:43,640 | INFO | sqlalchemy.engine.Engine | ROLLBACK

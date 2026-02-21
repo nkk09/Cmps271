@@ -1,121 +1,60 @@
 import { useState, useEffect } from "react"
 import "../styles/landing.css"
+import api from "../api"
 
 function Landing({ user, onLogout }) {
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("all")
+  const [selectedDepartment, setSelectedDepartment] = useState("")
   const [courses, setCourses] = useState([])
   const [filteredCourses, setFilteredCourses] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+  const [departments, setDepartments] = useState([])
 
-  const categories = [
-    { id: "all", name: "All Courses" },
-    { id: "computer-science", name: "Computer Science" },
-    { id: "mathematics", name: "Mathematics" },
-    { id: "engineering", name: "Engineering" },
-    { id: "business", name: "Business" },
-    { id: "science", name: "Science" },
-  ]
-
-  // Sample courses data
-  const sampleCourses = [
-    {
-      id: 1,
-      title: "Introduction to Python",
-      category: "computer-science",
-      instructor: "Dr. Smith",
-      students: 245,
-      rating: 4.8,
-      image: "🐍",
-    },
-    {
-      id: 2,
-      title: "Data Structures",
-      category: "computer-science",
-      instructor: "Prof. Johnson",
-      students: 189,
-      rating: 4.7,
-      image: "📊",
-    },
-    {
-      id: 3,
-      title: "Calculus I",
-      category: "mathematics",
-      instructor: "Dr. Brown",
-      students: 312,
-      rating: 4.6,
-      image: "∫",
-    },
-    {
-      id: 4,
-      title: "Linear Algebra",
-      category: "mathematics",
-      instructor: "Prof. Davis",
-      students: 156,
-      rating: 4.9,
-      image: "⚙️",
-    },
-    {
-      id: 5,
-      title: "Circuit Design",
-      category: "engineering",
-      instructor: "Dr. Wilson",
-      students: 98,
-      rating: 4.5,
-      image: "⚡",
-    },
-    {
-      id: 6,
-      title: "Business Analytics",
-      category: "business",
-      instructor: "Prof. Miller",
-      students: 203,
-      rating: 4.7,
-      image: "💼",
-    },
-    {
-      id: 7,
-      title: "Web Development",
-      category: "computer-science",
-      instructor: "Dr. Taylor",
-      students: 421,
-      rating: 4.8,
-      image: "🌐",
-    },
-    {
-      id: 8,
-      title: "Chemistry Fundamentals",
-      category: "science",
-      instructor: "Prof. Anderson",
-      students: 267,
-      rating: 4.6,
-      image: "⚗️",
-    },
-  ]
-
+  // Fetch courses from backend
   useEffect(() => {
-    setCourses(sampleCourses)
-    setFilteredCourses(sampleCourses)
+    const fetchCourses = async () => {
+      setLoading(true)
+      setError("")
+      try {
+        const allCourses = await api.getCourses()
+        setCourses(allCourses || [])
+        
+        // Extract unique departments
+        const depts = [...new Set(allCourses.map(c => c.department))]
+        setDepartments(["All Departments", ...depts])
+      } catch (err) {
+        console.error("Failed to fetch courses:", err)
+        setError("Failed to load courses")
+        setCourses([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCourses()
   }, [])
 
+  // Filter courses based on search and department
   useEffect(() => {
     let filtered = courses
 
-    // Filter by category
-    if (selectedCategory !== "all") {
-      filtered = filtered.filter((course) => course.category === selectedCategory)
+    // Filter by department
+    if (selectedDepartment && selectedDepartment !== "All Departments") {
+      filtered = filtered.filter((course) => course.department === selectedDepartment)
     }
 
     // Filter by search query
     if (searchQuery) {
       filtered = filtered.filter(
         (course) =>
-          course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          course.instructor.toLowerCase().includes(searchQuery.toLowerCase())
+          course.course_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          course.course_name.toLowerCase().includes(searchQuery.toLowerCase())
       )
     }
 
     setFilteredCourses(filtered)
-  }, [searchQuery, selectedCategory, courses])
+  }, [searchQuery, selectedDepartment, courses])
 
   return (
     <div className="landing-page">
@@ -151,15 +90,15 @@ function Landing({ user, onLogout }) {
 
         {/* Categories Section */}
         <div className="categories-section">
-          <h2>Categories</h2>
+          <h2>Departments</h2>
           <div className="categories-grid">
-            {categories.map((category) => (
+            {departments.map((dept) => (
               <button
-                key={category.id}
-                className={`category-btn ${selectedCategory === category.id ? "active" : ""}`}
-                onClick={() => setSelectedCategory(category.id)}
+                key={dept}
+                className={`category-btn ${(dept === "All Departments" && selectedDepartment === "") || selectedDepartment === dept ? "active" : ""}`}
+                onClick={() => setSelectedDepartment(dept === "All Departments" ? "" : dept)}
               >
-                {category.name}
+                {dept}
               </button>
             ))}
           </div>
@@ -167,31 +106,36 @@ function Landing({ user, onLogout }) {
 
         {/* Courses Section */}
         <div className="courses-section">
-          <h2>
-            {selectedCategory === "all" ? "All Courses" : `${categories.find((c) => c.id === selectedCategory)?.name}`}
-          </h2>
-          <div className="courses-grid">
-            {filteredCourses.length > 0 ? (
-              filteredCourses.map((course) => (
+          <h2>{selectedDepartment ? `${selectedDepartment} Courses` : "All Courses"}</h2>
+          
+          {error && <div className="error-message">{error}</div>}
+          
+          {loading ? (
+            <div className="loading">Loading courses...</div>
+          ) : filteredCourses.length > 0 ? (
+            <div className="courses-grid">
+              {filteredCourses.map((course) => (
                 <div key={course.id} className="course-card">
-                  <div className="course-image">{course.image}</div>
                   <div className="course-content">
-                    <h3>{course.title}</h3>
-                    <p className="instructor">👨‍🏫 {course.instructor}</p>
-                    <div className="course-meta">
-                      <span className="students">👥 {course.students} students</span>
-                      <span className="rating">⭐ {course.rating}</span>
-                    </div>
-                    <button className="enroll-btn">Enroll Now</button>
+                    <h3>{course.course_number}</h3>
+                    <p className="course-title">{course.course_name}</p>
+                    <p className="department">🏢 {course.department}</p>
+                    {course.credit_hours && (
+                      <p className="credits">📖 {course.credit_hours} credits</p>
+                    )}
+                    {course.description && (
+                      <p className="description">{course.description}</p>
+                    )}
+                    <button className="enroll-btn">View Sections & Reviews</button>
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="no-courses">
-                <p>No courses found. Try adjusting your search or filter.</p>
-              </div>
-            )}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="no-courses">
+              <p>No courses found. Try adjusting your search or filter.</p>
+            </div>
+          )}
         </div>
 
         {/* Profile Section */}
@@ -200,20 +144,16 @@ function Landing({ user, onLogout }) {
             <h2>My Profile</h2>
             <div className="profile-info">
               <div className="profile-item">
-                <label>Username:</label>
+                <label>Username (Anonymous):</label>
                 <span>{user?.username || "N/A"}</span>
-              </div>
-              <div className="profile-item">
-                <label>User ID:</label>
-                <span>{user?.user_id || "N/A"}</span>
               </div>
               <div className="profile-item">
                 <label>Role:</label>
                 <span>{user?.role || "Student"}</span>
               </div>
               <div className="profile-item">
-                <label>Email:</label>
-                <span>{user?.email || "Not provided"}</span>
+                <label>Member Since:</label>
+                <span>{user?.created_at ? new Date(user.created_at).toLocaleDateString() : "N/A"}</span>
               </div>
             </div>
           </div>
