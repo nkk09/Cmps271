@@ -5,13 +5,16 @@ class Settings(BaseSettings):
     APP_NAME: str = "AfterClass"
     ENV: str = "dev"
 
-    ## auth ##
+    ## auth — Microsoft Entra ID ##
     ENTRA_TENANT_ID: str | None = None
     ENTRA_CLIENT_ID: str | None = None
     ENTRA_CLIENT_SECRET: str | None = None
-    ENTRA_REDIRECT_URI: str | None = None
+    ENTRA_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/callback"
     ENTRA_AUTHORITY: str | None = None
     ENABLE_OAUTH: bool = False
+
+    ## frontend ##
+    FRONTEND_URL: str = "http://localhost:5173"
 
     ## email / OTP ##
     SMTP_HOST: str | None = None
@@ -30,7 +33,7 @@ class Settings(BaseSettings):
 
     ## database ##
     DATABASE_URL: str = "sqlite:///./aub_reviews.db"
-    
+
     ## jwt ##
     JWT_SECRET: str = "change-me-in-prod"
     JWT_ALGORITHM: str = "HS256"

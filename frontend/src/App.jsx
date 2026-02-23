@@ -27,9 +27,23 @@ function App() {
   }, [])
 
   useEffect(() => {
+    // ── Handle Entra OAuth callback ──────────────────────────────────────
+    // After Microsoft login, the backend redirects to:
+    //   FRONTEND_URL/auth/callback?token=<jwt>
+    // We read it once, store it, then strip it from the URL.
+    const params = new URLSearchParams(window.location.search)
+    const callbackToken = params.get("token")
+    const isCallbackPath = window.location.pathname === "/auth/callback"
+
+    if (isCallbackPath && callbackToken) {
+      api.token.set(callbackToken)
+      // Clean the token out of the URL so it's not visible or bookmarkable
+      window.history.replaceState({}, "", "/")
+    }
+    // ────────────────────────────────────────────────────────────────────
+
     checkAuth()
 
-    // Handle token expiry from anywhere in the app
     const handleExpired = () => setUser(null)
     window.addEventListener("auth:expired", handleExpired)
     return () => window.removeEventListener("auth:expired", handleExpired)
@@ -63,45 +77,54 @@ function App() {
 
   return (
     <div>
-      <nav className="top-nav" style={{
-        background: "#333",
+      <nav style={{
+        background: "linear-gradient(135deg, #8b1538, #5c0f25)",
         color: "white",
-        padding: "15px 20px",
+        padding: "0 30px",
         display: "flex",
-        gap: "20px",
-        alignItems: "center"
+        gap: "4px",
+        alignItems: "center",
+        height: "52px",
+        position: "sticky",
+        top: 0,
+        zIndex: 200,
+        boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
       }}>
-        <button
-          onClick={() => setCurrentPage("landing")}
-          style={{
-            background: currentPage === "landing" ? "#667eea" : "transparent",
-            color: "white",
-            border: "none",
-            padding: "8px 15px",
-            borderRadius: "5px",
-            cursor: "pointer"
-          }}
-        >
+        <span style={{ fontWeight: 700, fontSize: "16px", marginRight: "20px", opacity: 0.9 }}>
+          📚 AfterClass
+        </span>
+        <NavButton active={currentPage === "landing"} onClick={() => setCurrentPage("landing")}>
           🏠 Courses
-        </button>
-        <button
-          onClick={() => setCurrentPage("reviews")}
-          style={{
-            background: currentPage === "reviews" ? "#667eea" : "transparent",
-            color: "white",
-            border: "none",
-            padding: "8px 15px",
-            borderRadius: "5px",
-            cursor: "pointer"
-          }}
-        >
+        </NavButton>
+        <NavButton active={currentPage === "reviews"} onClick={() => setCurrentPage("reviews")}>
           📝 Reviews
-        </button>
+        </NavButton>
       </nav>
 
       {currentPage === "landing" && <Landing user={user} onLogout={handleLogout} />}
       {currentPage === "reviews" && <Reviews user={user} />}
     </div>
+  )
+}
+
+function NavButton({ active, onClick, children }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        background: active ? "rgba(255,255,255,0.2)" : "transparent",
+        color: "white",
+        border: "none",
+        padding: "8px 16px",
+        borderRadius: "6px",
+        cursor: "pointer",
+        fontWeight: active ? 600 : 400,
+        fontSize: "14px",
+        transition: "background 0.2s",
+      }}
+    >
+      {children}
+    </button>
   )
 }
 

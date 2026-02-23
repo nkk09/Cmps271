@@ -301,3 +301,73 @@ uvicorn app.main:app --reload --port 8001
 | http://localhost:8000/docs | Interactive API documentation (Swagger UI) |
 | http://localhost:8000/redoc | Alternative API docs (ReDoc) |
 | http://localhost:8000/health | Quick check that the backend is alive |
+
+---
+
+## Microsoft Entra ID setup (primary login method)
+
+AfterClass uses Microsoft Entra ID (formerly Azure AD) for authentication. Here's how to register the app.
+
+### 1 — Register the app in Azure Portal
+
+1. Go to [portal.azure.com](https://portal.azure.com) and sign in with an account that has access to your AUB tenant.
+2. Search for **"App registrations"** → click **New registration**.
+3. Fill in:
+   - **Name:** `AfterClass` (or anything you like)
+   - **Supported account types:** *Accounts in this organizational directory only* (your AUB tenant)
+   - **Redirect URI:** choose **Web**, enter `http://localhost:8000/api/v1/auth/callback`
+4. Click **Register**.
+
+### 2 — Collect your credentials
+
+On the app's overview page, copy:
+- **Application (client) ID** → this is your `ENTRA_CLIENT_ID`
+- **Directory (tenant) ID** → this is your `ENTRA_TENANT_ID`
+
+Then create a client secret:
+1. Left sidebar → **Certificates & secrets** → **New client secret**
+2. Set an expiry → click **Add**
+3. Copy the **Value** immediately (it won't be shown again) → this is your `ENTRA_CLIENT_SECRET`
+
+### 3 — Fill in your `.env`
+
+```env
+ENTRA_TENANT_ID=paste-your-tenant-id
+ENTRA_CLIENT_ID=paste-your-client-id
+ENTRA_CLIENT_SECRET=paste-your-client-secret
+ENTRA_REDIRECT_URI=http://localhost:8000/api/v1/auth/callback
+ENABLE_OAUTH=true
+FRONTEND_URL=http://localhost:5173
+```
+
+### 4 — Tell the frontend to show the Microsoft button
+
+Create `frontend/.env` (next to `package.json`):
+
+```env
+VITE_ENABLE_OAUTH=true
+VITE_BACKEND_URL=http://localhost:8000
+```
+
+### 5 — Restart both servers
+
+The login page will now show a **Sign in with Microsoft** button instead of the OTP form.
+
+### How the login flow works
+
+```
+User clicks "Sign in with Microsoft"
+  → Frontend calls GET /api/v1/auth/login
+  → Backend generates PKCE challenge + state, redirects to Microsoft
+  → User logs in on Microsoft's page
+  → Microsoft redirects to GET /api/v1/auth/callback?code=...&state=...
+  → Backend validates state, exchanges code for ID token
+  → Backend creates/finds the user, issues a JWT
+  → Backend redirects to http://localhost:5173/auth/callback?token=<jwt>
+  → Frontend stores the token, cleans the URL, loads the app
+```
+
+Role is determined automatically from the email domain:
+- `@mail.aub.edu` → **student**
+- `@aub.edu.lb` → **professor**
+- Any other domain → rejected with 403

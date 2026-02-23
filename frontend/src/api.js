@@ -72,6 +72,15 @@ const auth = {
   isLoggedIn() {
     return !!token.get()
   },
+
+  /**
+   * Redirect to the backend Entra login endpoint.
+   * After auth, the backend redirects to FRONTEND_URL/auth/callback?token=<jwt>
+   */
+  loginWithEntra() {
+    const base = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000') + '/api/v1'
+    window.location.href = `${base}/auth/login`
+  },
 }
 
 // ---------------------------------------------------------------------------
