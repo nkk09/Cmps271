@@ -23,7 +23,7 @@ function Landing({ user, onLogout }) {
   const [departments, setDepartments] = useState([])
   const [loadingCourses, setLoadingCourses] = useState(true)
   const [courseError, setCourseError] = useState("")
-  const [coursesOpen, setCoursesOpen] = useState(true)
+  const [coursesOpen, setCoursesOpen] = useState(false)
 
   // Recent reviews (student's own reviews shown on landing)
   const [recentReviews, setRecentReviews] = useState([])
@@ -81,6 +81,11 @@ function Landing({ user, onLogout }) {
     setFilteredCourses(filtered)
   }, [searchQuery, selectedDepartment, courses])
 
+  const refreshReviews = async () => {
+    const updated = await api.users.getMyReviews({ limit: 5 }).catch(() => [])
+    setRecentReviews(updated || [])
+  }
+
   // Like/Dislike a review, then refresh the list
   const handleInteract = async (reviewId, next, current) => {
     try {
@@ -93,10 +98,28 @@ function Landing({ user, onLogout }) {
       } else {
         await api.reviews.removeInteraction(reviewId)
       }
-      const updated = await api.users.getMyReviews({ limit: 5 }).catch(() => [])
-      setRecentReviews(updated || [])
+      await refreshReviews()
     } catch (err) {
       console.error("Interaction failed:", err)
+    }
+  }
+
+  const handleDeleteReview = async (reviewId) => {
+    if (!confirm("Delete this review?")) return
+    try {
+      await api.reviews.delete(reviewId)
+      await refreshReviews()
+    } catch (err) {
+      console.error("Delete failed:", err)
+    }
+  }
+
+  const handleEditReview = async (reviewId, newContent) => {
+    try {
+      await api.reviews.update(reviewId, { content: newContent })
+      await refreshReviews()
+    } catch (err) {
+      console.error("Edit failed:", err)
     }
   }
 
@@ -233,6 +256,10 @@ function Landing({ user, onLogout }) {
                       reaction={myInteraction}
                       onReact={(next) => handleInteract(review.id, next, myInteraction)}
                       disableInteract={true}
+                      author={review.student?.username || "anonymous"}
+                      isMyReview={true}
+                      onDelete={() => handleDeleteReview(review.id)}
+                      onEdit={(newContent) => handleEditReview(review.id, newContent)}
                     />
                   )
                 })}

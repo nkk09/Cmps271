@@ -1,8 +1,138 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import "../styles/reviews.css"
 import api from "../api"
 import ReviewCard from "../components/ReviewCard"
 
+/* ---------- Searchable Course Dropdown ---------- */
+function CourseSearchSelect({ courses, value, onChange, placeholder = "Select a Course" }) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState("")
+  const ref = useRef(null)
+
+  const selected = courses.find((c) => c.id === value)
+
+  const filtered = query.trim()
+    ? courses.filter(
+        (c) =>
+          c.code.toLowerCase().includes(query.toLowerCase()) ||
+          c.title.toLowerCase().includes(query.toLowerCase())
+      )
+    : courses
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener("mousedown", handler)
+    return () => document.removeEventListener("mousedown", handler)
+  }, [])
+
+  const handleSelect = (id) => {
+    onChange(id)
+    setQuery("")
+    setOpen(false)
+  }
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <div
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          padding: "0.55rem 0.85rem",
+          border: "1px solid #d1d5db",
+          borderRadius: "8px",
+          background: "white",
+          cursor: "pointer",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          fontSize: "0.925rem",
+          minWidth: "220px",
+        }}
+      >
+        <span style={{ color: selected ? "#111" : "#999" }}>
+          {selected ? `${selected.code} — ${selected.title}` : placeholder}
+        </span>
+        <span style={{ color: "#888", marginLeft: "0.5rem" }}>{open ? "▴" : "▾"}</span>
+      </div>
+
+      {open && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 4px)",
+            left: 0,
+            right: 0,
+            background: "white",
+            border: "1px solid #d1d5db",
+            borderRadius: "8px",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+            zIndex: 999,
+            minWidth: "280px",
+          }}
+        >
+          <div style={{ padding: "0.5rem" }}>
+            <input
+              autoFocus
+              type="text"
+              placeholder="Search courses..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: "100%",
+                padding: "0.45rem 0.7rem",
+                border: "1px solid #d1d5db",
+                borderRadius: "6px",
+                fontSize: "0.875rem",
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
+          <div style={{ maxHeight: "240px", overflowY: "auto" }}>
+            {value && (
+              <div
+                onClick={() => handleSelect("")}
+                style={{
+                  padding: "0.55rem 1rem",
+                  cursor: "pointer",
+                  fontSize: "0.875rem",
+                  color: "#888",
+                  borderBottom: "1px solid #f0f0f0",
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "#f9fafb"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+              >
+                — Clear selection
+              </div>
+            )}
+            {filtered.length === 0 && (
+              <div style={{ padding: "0.75rem 1rem", color: "#999", fontSize: "0.875rem" }}>No courses found</div>
+            )}
+            {filtered.map((course) => (
+              <div
+                key={course.id}
+                onClick={() => handleSelect(course.id)}
+                style={{
+                  padding: "0.55rem 1rem",
+                  cursor: "pointer",
+                  fontSize: "0.875rem",
+                  background: course.id === value ? "#eff6ff" : "transparent",
+                  color: course.id === value ? "#2563eb" : "#111",
+                }}
+                onMouseEnter={(e) => { if (course.id !== value) e.currentTarget.style.background = "#f9fafb" }}
+                onMouseLeave={(e) => { if (course.id !== value) e.currentTarget.style.background = "transparent" }}
+              >
+                <strong>{course.code}</strong> — {course.title}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ---------- Main Reviews Page ---------- */
 function Reviews({ user }) {
   const [courses, setCourses] = useState([])
   const [professors, setProfessors] = useState([])
@@ -15,6 +145,11 @@ function Reviews({ user }) {
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+
+  // Separate course selection for the create form
+  const [formCourse, setFormCourse] = useState("")
+  const [formSections, setFormSections] = useState([])
+  const [loadingFormSections, setLoadingFormSections] = useState(false)
 
   const [formData, setFormData] = useState({
     section_id: "",
@@ -45,9 +180,9 @@ function Reviews({ user }) {
     fetchData()
   }, [])
 
-  // Load sections when course is selected (for the create form)
+  // Load sections for the filter panel when course is selected
   useEffect(() => {
-    if (!selectedCourse) return
+    if (!selectedCourse) { setSections([]); return }
     setLoadingSections(true)
     api.courses.getSections(selectedCourse)
       .then((data) => setSections(data || []))
@@ -55,20 +190,38 @@ function Reviews({ user }) {
       .finally(() => setLoadingSections(false))
   }, [selectedCourse])
 
+  // Load sections for the CREATE form when formCourse changes
+  useEffect(() => {
+    if (!formCourse) { setFormSections([]); return }
+    setLoadingFormSections(true)
+    api.courses.getSections(formCourse)
+      .then((data) => setFormSections(data || []))
+      .catch(() => setFormSections([]))
+      .finally(() => setLoadingFormSections(false))
+  }, [formCourse])
+
+  // Derive professors available for the selected course from sections
+  const availableProfessors = selectedCourse
+    ? Array.from(
+        new Map(
+          sections
+            .filter((s) => s.professor)
+            .map((s) => [s.professor.id, s.professor])
+        ).values()
+      )
+    : professors
+
   // Load reviews whenever filters change
   useEffect(() => {
-    if (!selectedCourse && !selectedProfessor) {
-      setReviews([])
-      return
-    }
+    if (!selectedCourse && !selectedProfessor) { setReviews([]); return }
     const loadReviews = async () => {
       setReviews([])
       try {
         let data = []
         if (selectedCourse) {
-          const courseSections = await api.courses.getSections(selectedCourse)
+          const courseSections = sections.length ? sections : await api.courses.getSections(selectedCourse)
           const filtered = selectedProfessor
-            ? courseSections.filter((s) => s.professor.id === selectedProfessor)
+            ? courseSections.filter((s) => s.professor?.id === selectedProfessor)
             : courseSections
           const allReviews = await Promise.all(
             filtered.map((s) =>
@@ -86,16 +239,16 @@ function Reviews({ user }) {
       }
     }
     loadReviews()
-  }, [selectedCourse, selectedProfessor, sortBy])
+  }, [selectedCourse, selectedProfessor, sortBy, sections])
 
   const reloadReviews = async () => {
     if (!selectedCourse && !selectedProfessor) return
     try {
       let data = []
       if (selectedCourse) {
-        const courseSections = await api.courses.getSections(selectedCourse)
+        const courseSections = sections.length ? sections : await api.courses.getSections(selectedCourse)
         const filtered = selectedProfessor
-          ? courseSections.filter((s) => s.professor.id === selectedProfessor)
+          ? courseSections.filter((s) => s.professor?.id === selectedProfessor)
           : courseSections
         const allReviews = await Promise.all(
           filtered.map((s) => api.sections.getReviews(s.id, { sort_by: sortBy }).catch(() => []))
@@ -123,6 +276,8 @@ function Reviews({ user }) {
         rating: parseFloat(formData.rating),
       })
       setFormData({ section_id: "", content: "", rating: 5 })
+      setFormCourse("")
+      setFormSections([])
       setShowCreateForm(false)
       await reloadReviews()
     } catch (err) {
@@ -132,7 +287,6 @@ function Reviews({ user }) {
     }
   }
 
-  // Handles like/dislike from ReviewCard — toggles if same, removes if null
   const handleInteract = async (reviewId, next, current) => {
     try {
       if (current === next || next === null) {
@@ -158,164 +312,173 @@ function Reviews({ user }) {
     }
   }
 
+  const handleEditReview = async (reviewId, newContent) => {
+    try {
+      await api.reviews.update(reviewId, { content: newContent })
+      await reloadReviews()
+    } catch (err) {
+      setError(err.message || "Failed to update review")
+    }
+  }
+
   return (
     <div className="reviews-page">
       <div className="reviews-inner">
-      <header className="reviews-header">
-        <h1>📝 Course &amp; Professor Reviews</h1>
-        {isStudent && (
-          <button
-            className="create-review-btn"
-            onClick={() => setShowCreateForm(!showCreateForm)}
-          >
-            {showCreateForm ? "Cancel" : "Write a Review"}
-          </button>
-        )}
-      </header>
-
-      {error && <div className="error-message">{error}</div>}
-
-      {/* Create Review Form */}
-      {showCreateForm && isStudent && (
-        <div className="create-review-form">
-          <h2>Write a Review</h2>
-          <form onSubmit={handleCreateReview}>
-            <div className="form-group">
-              <label>Course *</label>
-              <select
-                value={selectedCourse}
-                onChange={(e) => {
-                  setSelectedCourse(e.target.value)
-                  setFormData((f) => ({ ...f, section_id: "" }))
-                  setSections([])
-                }}
-                required
-              >
-                <option value="">Select a Course</option>
-                {courses.map((course) => (
-                  <option key={course.id} value={course.id}>
-                    {course.code} — {course.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>Section *</label>
-              <select
-                value={formData.section_id}
-                onChange={(e) => setFormData((f) => ({ ...f, section_id: e.target.value }))}
-                required
-                disabled={!selectedCourse || loadingSections}
-              >
-                <option value="">
-                  {loadingSections ? "Loading sections..." : "Select a Section"}
-                </option>
-                {sections.map((section) => (
-                  <option key={section.id} value={section.id}>
-                    {section.section_number} — {section.professor.first_name} {section.professor.last_name} — {section.semester.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>Review * (min. 20 characters)</label>
-              <textarea
-                value={formData.content}
-                onChange={(e) => setFormData((f) => ({ ...f, content: e.target.value }))}
-                placeholder="Share your experience with the course and professor..."
-                required
-                minLength={20}
-                rows={5}
-              />
-              <small>{formData.content.length} characters</small>
-            </div>
-
-            <div className="form-group">
-              <label>Rating *</label>
-              <select
-                value={formData.rating}
-                onChange={(e) => setFormData((f) => ({ ...f, rating: e.target.value }))}
-              >
-                <option value="1">1 — Poor</option>
-                <option value="2">2 — Fair</option>
-                <option value="3">3 — Good</option>
-                <option value="4">4 — Very Good</option>
-                <option value="5">5 — Excellent</option>
-              </select>
-            </div>
-
-            <button type="submit" disabled={loading}>
-              {loading ? "Posting..." : "Post Review"}
+        <header className="reviews-header">
+          <h1>📝 Course &amp; Professor Reviews</h1>
+          {isStudent && (
+            <button
+              className="create-review-btn"
+              onClick={() => setShowCreateForm(!showCreateForm)}
+            >
+              {showCreateForm ? "Cancel" : "Write a Review"}
             </button>
-          </form>
-        </div>
-      )}
+          )}
+        </header>
 
-      {/* Filters */}
-      <div className="reviews-filters">
-        <div className="filter-group">
-          <label>Filter by Course</label>
-          <select value={selectedCourse} onChange={(e) => setSelectedCourse(e.target.value)}>
-            <option value="">Select a Course</option>
-            {courses.map((course) => (
-              <option key={course.id} value={course.id}>
-                {course.code} — {course.title}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="filter-group">
-          <label>Filter by Professor</label>
-          <select value={selectedProfessor} onChange={(e) => setSelectedProfessor(e.target.value)}>
-            <option value="">All Professors</option>
-            {professors.map((prof) => (
-              <option key={prof.id} value={prof.id}>
-                {prof.first_name} {prof.last_name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="filter-group">
-          <label>Sort By</label>
-          <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-            <option value="newest">Newest</option>
-            <option value="top_rated">Top Rated</option>
-            <option value="most_liked">Most Liked</option>
-          </select>
-        </div>
-      </div>
+        {error && <div className="error-message">{error}</div>}
 
-      {!selectedCourse && !selectedProfessor && (
-        <div className="no-reviews">
-          <p>Select a course or professor above to see reviews.</p>
-        </div>
-      )}
+        {/* Create Review Form */}
+        {showCreateForm && isStudent && (
+          <div className="create-review-form">
+            <h2>Write a Review</h2>
+            <form onSubmit={handleCreateReview}>
+              <div className="form-group">
+                <label>Course *</label>
+                <CourseSearchSelect
+                  courses={courses}
+                  value={formCourse}
+                  onChange={(id) => {
+                    setFormCourse(id)
+                    setFormData((f) => ({ ...f, section_id: "" }))
+                  }}
+                  placeholder="Search and select a course"
+                />
+              </div>
 
-      {/* Reviews List — rendered with the shared ReviewCard component */}
-      <div className="reviews-list">
-        {loading && <div className="loading">Loading reviews...</div>}
+              <div className="form-group">
+                <label>Section *</label>
+                <select
+                  value={formData.section_id}
+                  onChange={(e) => setFormData((f) => ({ ...f, section_id: e.target.value }))}
+                  required
+                  disabled={!formCourse || loadingFormSections}
+                >
+                  <option value="">
+                    {loadingFormSections ? "Loading sections..." : "Select a Section"}
+                  </option>
+                  {formSections.map((section) => (
+                    <option key={section.id} value={section.id}>
+                      {section.section_number} — {section.professor?.first_name} {section.professor?.last_name} — {section.semester?.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-        {!loading && (selectedCourse || selectedProfessor) && reviews.length === 0 && (
-          <div className="no-reviews">
-            <p>No approved reviews yet. Be the first to write one!</p>
+              <div className="form-group">
+                <label>Review * (min. 20 characters)</label>
+                <textarea
+                  value={formData.content}
+                  onChange={(e) => setFormData((f) => ({ ...f, content: e.target.value }))}
+                  placeholder="Share your experience with the course and professor..."
+                  required
+                  minLength={20}
+                  rows={5}
+                />
+                <small>{formData.content.length} characters</small>
+              </div>
+
+              <div className="form-group">
+                <label>Rating *</label>
+                <select
+                  value={formData.rating}
+                  onChange={(e) => setFormData((f) => ({ ...f, rating: e.target.value }))}
+                >
+                  <option value="1">1 — Poor</option>
+                  <option value="2">2 — Fair</option>
+                  <option value="3">3 — Good</option>
+                  <option value="4">4 — Very Good</option>
+                  <option value="5">5 — Excellent</option>
+                </select>
+              </div>
+
+              <button type="submit" disabled={loading}>
+                {loading ? "Posting..." : "Post Review"}
+              </button>
+            </form>
           </div>
         )}
 
-        {reviews.map((review) => {
-          const myInteraction = review.my_interaction ?? null
-          const isMyReview = studentId && review.student?.id === studentId
+        {/* Filters */}
+        <div className="reviews-filters">
+          <div className="filter-group">
+            <label>Filter by Course</label>
+            <CourseSearchSelect
+              courses={courses}
+              value={selectedCourse}
+              onChange={(id) => {
+                setSelectedCourse(id)
+                setSelectedProfessor("")
+              }}
+              placeholder="Select a Course"
+            />
+          </div>
+          <div className="filter-group">
+            <label>Filter by Professor</label>
+            <select
+              value={selectedProfessor}
+              onChange={(e) => setSelectedProfessor(e.target.value)}
+              disabled={selectedCourse && loadingSections}
+            >
+              <option value="">All Professors</option>
+              {availableProfessors.map((prof) => (
+                <option key={prof.id} value={prof.id}>
+                  {prof.first_name} {prof.last_name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="filter-group">
+            <label>Sort By</label>
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+              <option value="newest">Newest</option>
+              <option value="top_rated">Top Rated</option>
+              <option value="most_liked">Most Liked</option>
+            </select>
+          </div>
+        </div>
 
-          return (
-            <div key={review.id}>
+        {!selectedCourse && !selectedProfessor && (
+          <div className="no-reviews">
+            <p>Select a course or professor above to see reviews.</p>
+          </div>
+        )}
+
+        {/* Reviews List */}
+        <div className="reviews-list">
+          {loading && <div className="loading">Loading reviews...</div>}
+
+          {!loading && (selectedCourse || selectedProfessor) && reviews.length === 0 && (
+            <div className="no-reviews">
+              <p>No approved reviews yet. Be the first to write one!</p>
+            </div>
+          )}
+
+          {reviews.map((review) => {
+            const myInteraction = review.my_interaction ?? null
+            const isMyReview = !!(studentId && review.student?.id === studentId)
+            const courseCode = review.section?.course?.code || "Course"
+            const profName = review.section?.professor
+              ? `${review.section.professor.first_name} ${review.section.professor.last_name}`
+              : "Professor"
+
+            return (
               <ReviewCard
+                key={review.id}
                 review={{
                   id: review.id,
-                  course: review.section?.course?.code || "Course",
-                  professor: review.section?.professor
-                    ? `${review.section.professor.first_name} ${review.section.professor.last_name}`
-                    : "Professor",
+                  course: courseCode,
+                  professor: profName,
                   text: review.content,
                   likes: review.likes_count,
                   dislikes: review.dislikes_count,
@@ -324,34 +487,14 @@ function Reviews({ user }) {
                 reaction={myInteraction}
                 onReact={(next) => handleInteract(review.id, next, myInteraction)}
                 disableInteract={isMyReview}
+                author={review.student?.username || "anonymous"}
+                isMyReview={isMyReview}
+                onDelete={isMyReview ? () => handleDeleteReview(review.id) : undefined}
+                onEdit={isMyReview ? (newContent) => handleEditReview(review.id, newContent) : undefined}
               />
-
-              {/* Extra metadata row below the card */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "-0.5rem", marginBottom: "0.5rem", padding: "0 0.25rem" }}>
-                <span style={{ fontSize: "0.8rem", opacity: 0.7 }}>
-                  @{review.student?.username || "anonymous"}
-                </span>
-                {isMyReview && (
-                  <button
-                    onClick={() => handleDeleteReview(review.id)}
-                    style={{
-                      background: "transparent",
-                      border: "1px solid rgba(255,80,80,0.4)",
-                      color: "#ef4444",
-                      borderRadius: "8px",
-                      padding: "0.25rem 0.6rem",
-                      fontSize: "0.8rem",
-                      cursor: "pointer",
-                    }}
-                  >
-                    🗑 Delete
-                  </button>
-                )}
-              </div>
-            </div>
-          )
-        })}
-      </div>
+            )
+          })}
+        </div>
       </div>
     </div>
   )
