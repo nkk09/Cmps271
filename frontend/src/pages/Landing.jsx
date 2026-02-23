@@ -1,11 +1,96 @@
 import { useState, useEffect } from "react"
 import "../styles/landing.css"
+import ReviewCard from "../components/ReviewCard"
 
 function Landing({ user, onLogout }) {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [courses, setCourses] = useState([])
   const [filteredCourses, setFilteredCourses] = useState([])
+
+  // ---------------- Like/Dislike mechanism (Sprint 2) ----------------
+  // Replace these sample reviews later with real API data.
+  const [reviews, setReviews] = useState([
+    {
+      id: "r1",
+      course: "CMPS 271",
+      professor: "Staff",
+      text: "Good intro to product development. Workload is manageable if you start early.",
+      likes: 12,
+      dislikes: 1,
+      createdAt: "2026-02-15",
+    },
+    {
+      id: "r2",
+      course: "CMPS 244",
+      professor: "Staff",
+      text: "SQL part is straightforward, but assignments need careful debugging.",
+      likes: 7,
+      dislikes: 0,
+      createdAt: "2026-02-18",
+    },
+    {
+      id: "r3",
+      course: "CMPS 200",
+      professor: "Staff",
+      text: "Heavy theory. Great if you like proofs, otherwise it can feel rough.",
+      likes: 4,
+      dislikes: 3,
+      createdAt: "2026-02-20",
+    },
+  ])
+
+  // reaction per reviewId: "like" | "dislike" | null
+  const [reactions, setReactions] = useState({})
+
+  // Load saved reactions from localStorage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("review_reactions")
+      if (raw) setReactions(JSON.parse(raw))
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  // Persist reactions
+  useEffect(() => {
+    try {
+      localStorage.setItem("review_reactions", JSON.stringify(reactions))
+    } catch {
+      // ignore
+    }
+  }, [reactions])
+
+  const applyReaction = (reviewId, nextReaction) => {
+    const prevReaction = reactions[reviewId] ?? null
+    if (prevReaction === nextReaction) return
+
+    // Update counts optimistically
+    setReviews((prev) =>
+      prev.map((r) => {
+        if (r.id !== reviewId) return r
+
+        let likes = r.likes
+        let dislikes = r.dislikes
+
+        // remove previous
+        if (prevReaction === "like") likes -= 1
+        if (prevReaction === "dislike") dislikes -= 1
+
+        // add next
+        if (nextReaction === "like") likes += 1
+        if (nextReaction === "dislike") dislikes += 1
+
+        return { ...r, likes, dislikes }
+      })
+    )
+
+    setReactions((prev) => ({ ...prev, [reviewId]: nextReaction }))
+
+    // Later: send to backend
+    // await fetch(`/api/reviews/${reviewId}/reaction`, { method: "POST", ... })
+  }
 
   const categories = [
     { id: "all", name: "All Courses" },
@@ -66,7 +151,7 @@ function Landing({ user, onLogout }) {
     {
       id: 6,
       title: "Business Analytics",
-      category: "business",
+     category: "business",
       instructor: "Prof. Miller",
       students: 203,
       rating: 4.7,
@@ -168,8 +253,11 @@ function Landing({ user, onLogout }) {
         {/* Courses Section */}
         <div className="courses-section">
           <h2>
-            {selectedCategory === "all" ? "All Courses" : `${categories.find((c) => c.id === selectedCategory)?.name}`}
+            {selectedCategory === "all"
+              ? "All Courses"
+              : `${categories.find((c) => c.id === selectedCategory)?.name}`}
           </h2>
+
           <div className="courses-grid">
             {filteredCourses.length > 0 ? (
               filteredCourses.map((course) => (
@@ -192,6 +280,29 @@ function Landing({ user, onLogout }) {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Reviews Section (Sprint 2: Like/Dislike) */}
+        <div className="courses-section">
+          <h2>Recent Reviews</h2>
+
+          <div style={{ display: "grid", gap: "1rem" }}>
+            {reviews
+              .slice()
+              .sort((a, b) => (b.likes - b.dislikes) - (a.likes - a.dislikes))
+              .map((review) => (
+                <ReviewCard
+                  key={review.id}
+                  review={review}
+                  reaction={reactions[review.id] ?? null}
+                  onReact={(next) => applyReaction(review.id, next)}
+                />
+              ))}
+          </div>
+
+          <p style={{ marginTop: "0.75rem", opacity: 0.8, fontSize: "0.9rem" }}>
+            Your like/dislike choice is stored locally on this device.
+          </p>
         </div>
 
         {/* Profile Section */}
