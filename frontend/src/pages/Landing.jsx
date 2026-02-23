@@ -1,206 +1,109 @@
 import { useState, useEffect } from "react"
 import "../styles/landing.css"
+import api from "../api"
 import ReviewCard from "../components/ReviewCard"
+
+// Assign a consistent emoji to each course based on its department prefix
+const DEPT_EMOJI = {
+  CMPS: "💻", MATH: "📐", PHYS: "⚛️", CHEM: "⚗️",
+  BIOL: "🧬", ENGL: "📖", HIST: "🏛️", ECON: "📈",
+  MGMT: "💼", MECH: "⚙️", ELEC: "⚡", CVLE: "🏗️",
+}
+
+function getCourseEmoji(course) {
+  const prefix = (course.code || "").split(" ")[0].toUpperCase()
+  return DEPT_EMOJI[prefix] || "📚"
+}
 
 function Landing({ user, onLogout }) {
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("all")
+  const [selectedDepartment, setSelectedDepartment] = useState("")
   const [courses, setCourses] = useState([])
   const [filteredCourses, setFilteredCourses] = useState([])
+  const [departments, setDepartments] = useState([])
+  const [loadingCourses, setLoadingCourses] = useState(true)
+  const [courseError, setCourseError] = useState("")
 
-  // ---------------- Like/Dislike mechanism (Sprint 2) ----------------
-  // Replace these sample reviews later with real API data.
-  const [reviews, setReviews] = useState([
-    {
-      id: "r1",
-      course: "CMPS 271",
-      professor: "Staff",
-      text: "Good intro to product development. Workload is manageable if you start early.",
-      likes: 12,
-      dislikes: 1,
-      createdAt: "2026-02-15",
-    },
-    {
-      id: "r2",
-      course: "CMPS 244",
-      professor: "Staff",
-      text: "SQL part is straightforward, but assignments need careful debugging.",
-      likes: 7,
-      dislikes: 0,
-      createdAt: "2026-02-18",
-    },
-    {
-      id: "r3",
-      course: "CMPS 200",
-      professor: "Staff",
-      text: "Heavy theory. Great if you like proofs, otherwise it can feel rough.",
-      likes: 4,
-      dislikes: 3,
-      createdAt: "2026-02-20",
-    },
-  ])
+  // Recent reviews (student's own reviews shown on landing)
+  const [recentReviews, setRecentReviews] = useState([])
+  const [loadingReviews, setLoadingReviews] = useState(false)
 
-  // reaction per reviewId: "like" | "dislike" | null
-  const [reactions, setReactions] = useState({})
+  const isStudent = user?.roles?.includes("student")
 
-  // Load saved reactions from localStorage
+  // Fetch courses and departments
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("review_reactions")
-      if (raw) setReactions(JSON.parse(raw))
-    } catch {
-      // ignore
+    const fetchData = async () => {
+      setLoadingCourses(true)
+      setCourseError("")
+      try {
+        const [allCourses, depts] = await Promise.all([
+          api.courses.list({ limit: 100 }),
+          api.courses.getDepartments(),
+        ])
+        setCourses(allCourses || [])
+        setDepartments(depts || [])
+      } catch (err) {
+        console.error("Failed to fetch courses:", err)
+        setCourseError("Failed to load courses")
+        setCourses([])
+      } finally {
+        setLoadingCourses(false)
+      }
     }
+    fetchData()
   }, [])
 
-  // Persist reactions
+  // Fetch the student's own recent reviews to show on the landing page
   useEffect(() => {
-    try {
-      localStorage.setItem("review_reactions", JSON.stringify(reactions))
-    } catch {
-      // ignore
-    }
-  }, [reactions])
+    if (!isStudent) return
+    setLoadingReviews(true)
+    api.users.getMyReviews({ limit: 5 })
+      .then((data) => setRecentReviews(data || []))
+      .catch(() => setRecentReviews([]))
+      .finally(() => setLoadingReviews(false))
+  }, [isStudent])
 
-  const applyReaction = (reviewId, nextReaction) => {
-    const prevReaction = reactions[reviewId] ?? null
-    if (prevReaction === nextReaction) return
-
-    // Update counts optimistically
-    setReviews((prev) =>
-      prev.map((r) => {
-        if (r.id !== reviewId) return r
-
-        let likes = r.likes
-        let dislikes = r.dislikes
-
-        // remove previous
-        if (prevReaction === "like") likes -= 1
-        if (prevReaction === "dislike") dislikes -= 1
-
-        // add next
-        if (nextReaction === "like") likes += 1
-        if (nextReaction === "dislike") dislikes += 1
-
-        return { ...r, likes, dislikes }
-      })
-    )
-
-    setReactions((prev) => ({ ...prev, [reviewId]: nextReaction }))
-
-    // Later: send to backend
-    // await fetch(`/api/reviews/${reviewId}/reaction`, { method: "POST", ... })
-  }
-
-  const categories = [
-    { id: "all", name: "All Courses" },
-    { id: "computer-science", name: "Computer Science" },
-    { id: "mathematics", name: "Mathematics" },
-    { id: "engineering", name: "Engineering" },
-    { id: "business", name: "Business" },
-    { id: "science", name: "Science" },
-  ]
-
-  // Sample courses data
-  const sampleCourses = [
-    {
-      id: 1,
-      title: "Introduction to Python",
-      category: "computer-science",
-      instructor: "Dr. Smith",
-      students: 245,
-      rating: 4.8,
-      image: "🐍",
-    },
-    {
-      id: 2,
-      title: "Data Structures",
-      category: "computer-science",
-      instructor: "Prof. Johnson",
-      students: 189,
-      rating: 4.7,
-      image: "📊",
-    },
-    {
-      id: 3,
-      title: "Calculus I",
-      category: "mathematics",
-      instructor: "Dr. Brown",
-      students: 312,
-      rating: 4.6,
-      image: "∫",
-    },
-    {
-      id: 4,
-      title: "Linear Algebra",
-      category: "mathematics",
-      instructor: "Prof. Davis",
-      students: 156,
-      rating: 4.9,
-      image: "⚙️",
-    },
-    {
-      id: 5,
-      title: "Circuit Design",
-      category: "engineering",
-      instructor: "Dr. Wilson",
-      students: 98,
-      rating: 4.5,
-      image: "⚡",
-    },
-    {
-      id: 6,
-      title: "Business Analytics",
-     category: "business",
-      instructor: "Prof. Miller",
-      students: 203,
-      rating: 4.7,
-      image: "💼",
-    },
-    {
-      id: 7,
-      title: "Web Development",
-      category: "computer-science",
-      instructor: "Dr. Taylor",
-      students: 421,
-      rating: 4.8,
-      image: "🌐",
-    },
-    {
-      id: 8,
-      title: "Chemistry Fundamentals",
-      category: "science",
-      instructor: "Prof. Anderson",
-      students: 267,
-      rating: 4.6,
-      image: "⚗️",
-    },
-  ]
-
-  useEffect(() => {
-    setCourses(sampleCourses)
-    setFilteredCourses(sampleCourses)
-  }, [])
-
+  // Filter courses locally on every search/department change
   useEffect(() => {
     let filtered = courses
-
-    // Filter by category
-    if (selectedCategory !== "all") {
-      filtered = filtered.filter((course) => course.category === selectedCategory)
+    if (selectedDepartment) {
+      filtered = filtered.filter((c) => c.department === selectedDepartment)
     }
-
-    // Filter by search query
-    if (searchQuery) {
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
       filtered = filtered.filter(
-        (course) =>
-          course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          course.instructor.toLowerCase().includes(searchQuery.toLowerCase())
+        (c) =>
+          c.code.toLowerCase().includes(q) ||
+          c.title.toLowerCase().includes(q)
       )
     }
-
     setFilteredCourses(filtered)
-  }, [searchQuery, selectedCategory, courses])
+  }, [searchQuery, selectedDepartment, courses])
+
+  // Like/Dislike a review, then refresh the list
+  const handleInteract = async (reviewId, next, current) => {
+    try {
+      if (current === next) {
+        await api.reviews.removeInteraction(reviewId)
+      } else if (next === "like") {
+        await api.reviews.like(reviewId)
+      } else if (next === "dislike") {
+        await api.reviews.dislike(reviewId)
+      } else {
+        await api.reviews.removeInteraction(reviewId)
+      }
+      const updated = await api.users.getMyReviews({ limit: 5 }).catch(() => [])
+      setRecentReviews(updated || [])
+    } catch (err) {
+      console.error("Interaction failed:", err)
+    }
+  }
+
+  const username = user?.student?.username || user?.user?.id?.slice(0, 8) || "User"
+  const role = user?.roles?.[0] || "student"
+  const memberSince = user?.user?.created_at
+    ? new Date(user.user.created_at).toLocaleDateString()
+    : "N/A"
 
   return (
     <div className="landing-page">
@@ -208,123 +111,147 @@ function Landing({ user, onLogout }) {
       <header className="landing-header">
         <div className="header-content">
           <div className="logo-section">
-            <h1 className="logo-title">📚 EduHub</h1>
+            <h1 className="logo-title">📚 AUB Reviews</h1>
           </div>
           <div className="profile-section">
             <div className="user-profile">
-              <span className="username">{user?.username || "User"}</span>
-              <button className="logout-btn" onClick={onLogout}>
-                Logout
-              </button>
+              <span className="username">{username}</span>
+              <button className="logout-btn" onClick={onLogout}>Logout</button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="landing-main">
-        {/* Search Bar Section */}
+        {/* Search */}
         <div className="search-section">
           <input
             type="text"
             className="search-bar"
-            placeholder="🔍 Search courses or instructors..."
+            placeholder="🔍 Search courses by code or title..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
 
-        {/* Categories Section */}
+        {/* Department filter */}
         <div className="categories-section">
-          <h2>Categories</h2>
+          <h2>Departments</h2>
           <div className="categories-grid">
-            {categories.map((category) => (
+            <button
+              className={`category-btn ${selectedDepartment === "" ? "active" : ""}`}
+              onClick={() => setSelectedDepartment("")}
+            >
+              All
+            </button>
+            {departments.map((dept) => (
               <button
-                key={category.id}
-                className={`category-btn ${selectedCategory === category.id ? "active" : ""}`}
-                onClick={() => setSelectedCategory(category.id)}
+                key={dept}
+                className={`category-btn ${selectedDepartment === dept ? "active" : ""}`}
+                onClick={() => setSelectedDepartment(dept)}
               >
-                {category.name}
+                {dept}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Courses Section */}
+        {/* Courses */}
         <div className="courses-section">
-          <h2>
-            {selectedCategory === "all"
-              ? "All Courses"
-              : `${categories.find((c) => c.id === selectedCategory)?.name}`}
-          </h2>
-
-          <div className="courses-grid">
-            {filteredCourses.length > 0 ? (
-              filteredCourses.map((course) => (
+          <h2>{selectedDepartment ? `${selectedDepartment} Courses` : "All Courses"}</h2>
+          {courseError && <div className="error-message">{courseError}</div>}
+          {loadingCourses ? (
+            <div className="loading">Loading courses...</div>
+          ) : filteredCourses.length > 0 ? (
+            <div className="courses-grid">
+              {filteredCourses.map((course) => (
                 <div key={course.id} className="course-card">
-                  <div className="course-image">{course.image}</div>
+                  <div className="course-image">{getCourseEmoji(course)}</div>
                   <div className="course-content">
-                    <h3>{course.title}</h3>
-                    <p className="instructor">👨‍🏫 {course.instructor}</p>
-                    <div className="course-meta">
-                      <span className="students">👥 {course.students} students</span>
-                      <span className="rating">⭐ {course.rating}</span>
-                    </div>
-                    <button className="enroll-btn">Enroll Now</button>
+                    <h3>{course.code}</h3>
+                    <p className="course-title">{course.title}</p>
+                    <p className="department">🏢 {course.department}</p>
+                    {course.description && (
+                      <p className="description">{course.description}</p>
+                    )}
+                    {course.attributes?.length > 0 && (
+                      <div className="course-attributes">
+                        {course.attributes.map((attr) => (
+                          <span key={attr} className="tag">{attr}</span>
+                        ))}
+                      </div>
+                    )}
+                    {course.average_rating != null && (
+                      <div className="course-meta">
+                        <span className="rating">⭐ {course.average_rating.toFixed(1)}</span>
+                      </div>
+                    )}
+                    <button className="enroll-btn">View Sections &amp; Reviews</button>
                   </div>
                 </div>
-              ))
+              ))}
+            </div>
+          ) : (
+            <div className="no-courses">
+              <p>No courses found. Try adjusting your search or filter.</p>
+            </div>
+          )}
+        </div>
+
+        {/* My Recent Reviews — only shown to students */}
+        {isStudent && (
+          <div className="courses-section">
+            <h2>My Recent Reviews</h2>
+            {loadingReviews ? (
+              <div className="loading">Loading reviews...</div>
+            ) : recentReviews.length > 0 ? (
+              <div style={{ display: "grid", gap: "1rem" }}>
+                {recentReviews.map((review) => {
+                  const myInteraction = review.my_interaction ?? null
+                  return (
+                    <ReviewCard
+                      key={review.id}
+                      review={{
+                        id: review.id,
+                        course: review.section?.course?.code || "Course",
+                        professor: review.section?.professor
+                          ? `${review.section.professor.first_name} ${review.section.professor.last_name}`
+                          : "Professor",
+                        text: review.content,
+                        likes: review.likes_count,
+                        dislikes: review.dislikes_count,
+                        createdAt: new Date(review.created_at).toLocaleDateString(),
+                      }}
+                      reaction={myInteraction}
+                      onReact={(next) => handleInteract(review.id, next, myInteraction)}
+                    />
+                  )
+                })}
+              </div>
             ) : (
               <div className="no-courses">
-                <p>No courses found. Try adjusting your search or filter.</p>
+                <p>You haven&apos;t written any reviews yet. Head to the Reviews tab to get started!</p>
               </div>
             )}
           </div>
-        </div>
+        )}
 
-        {/* Reviews Section (Sprint 2: Like/Dislike) */}
-        <div className="courses-section">
-          <h2>Recent Reviews</h2>
-
-          <div style={{ display: "grid", gap: "1rem" }}>
-            {reviews
-              .slice()
-              .sort((a, b) => (b.likes - b.dislikes) - (a.likes - a.dislikes))
-              .map((review) => (
-                <ReviewCard
-                  key={review.id}
-                  review={review}
-                  reaction={reactions[review.id] ?? null}
-                  onReact={(next) => applyReaction(review.id, next)}
-                />
-              ))}
-          </div>
-
-          <p style={{ marginTop: "0.75rem", opacity: 0.8, fontSize: "0.9rem" }}>
-            Your like/dislike choice is stored locally on this device.
-          </p>
-        </div>
-
-        {/* Profile Section */}
+        {/* Profile card */}
         <div className="profile-card-section">
           <div className="profile-card">
             <h2>My Profile</h2>
             <div className="profile-info">
               <div className="profile-item">
-                <label>Username:</label>
-                <span>{user?.username || "N/A"}</span>
+                <label>Username (Anonymous)</label>
+                <span>{username}</span>
               </div>
               <div className="profile-item">
-                <label>User ID:</label>
-                <span>{user?.user_id || "N/A"}</span>
+                <label>Role</label>
+                <span>{role}</span>
               </div>
               <div className="profile-item">
-                <label>Role:</label>
-                <span>{user?.role || "Student"}</span>
-              </div>
-              <div className="profile-item">
-                <label>Email:</label>
-                <span>{user?.email || "Not provided"}</span>
+                <label>Member Since</label>
+                <span>{memberSince}</span>
               </div>
             </div>
           </div>

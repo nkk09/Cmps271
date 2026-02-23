@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import api from "../api"
 
 function AuthCard({ onLoginSuccess }) {
   const [role, setRole] = useState("student")
@@ -13,7 +14,6 @@ function AuthCard({ onLoginSuccess }) {
 
   useEffect(() => {
     if (!otpStep || canResend) return
-
     const interval = setInterval(() => {
       setResendTimer((prev) => {
         if (prev <= 1) {
@@ -24,11 +24,8 @@ function AuthCard({ onLoginSuccess }) {
         return prev - 1
       })
     }, 1000)
-
     return () => clearInterval(interval)
   }, [otpStep, canResend])
-
-  const backend = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000"
 
   const placeholderForRole = role === "student" ? "student@mail.aub.edu" : "prof@aub.edu.lb"
 
@@ -37,60 +34,26 @@ function AuthCard({ onLoginSuccess }) {
     if (loading) return
 
     const lower = (email || "").toLowerCase().trim()
-    if (role === "student") {
-      if (!lower.endsWith("@mail.aub.edu")) {
-        setError("Student email must end with @mail.aub.edu")
-        return
-      }
-    } else {
-      if (!lower.endsWith("@aub.edu.lb")) {
-        setError("Professor email must end with @aub.edu.lb")
-        return
-      }
+    if (role === "student" && !lower.endsWith("@mail.aub.edu")) {
+      setError("Student email must end with @mail.aub.edu")
+      return
+    }
+    if (role === "professor" && !lower.endsWith("@aub.edu.lb")) {
+      setError("Professor email must end with @aub.edu.lb")
+      return
     }
 
     setError("")
     setLoading(true)
-    console.log("[AuthCard] setLoading(true) - email:", lower)
-
-    // Try OTP flow first. If backend responds that OTP is disabled (OAuth enabled), fallback to OAuth redirect.
     try {
-      console.log("[AuthCard] Fetching:", `${backend}/auth/otp/send`)
-      const resp = await fetch(`${backend}/auth/otp/send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: lower }),
-        credentials: "include",
-      })
-
-      if (resp.ok) {
-        setOtpStep(true)
-        setResendTimer(30)
-        setCanResend(false)
-        setLoading(false)
-        return
-      }
-
-      const text = await resp.text().catch(() => "")
-      console.debug("OTP send response", { url: `${backend}/auth/otp/send`, status: resp.status, body: text })
-      let data = {}
-      try {
-        data = JSON.parse(text || "{}")
-      } catch (e) {
-        data = {}
-      }
-      // If OTP disabled, start OAuth login
-      if (resp.status === 400 && typeof data.detail === "string" && data.detail.includes("OTP disabled")) {
-        window.location.href = `${backend}/auth/login`
-        return
-      }
-
-      setLoading(false)
-      setError((data && data.detail) || `Failed to start login (${resp.status})`)
+      await api.auth.requestOtp(lower)
+      setOtpStep(true)
+      setResendTimer(30)
+      setCanResend(false)
     } catch (err) {
-      console.log("[AuthCard] Error caught:", err.message || err)
+      setError(err.message || "Failed to send OTP")
+    } finally {
       setLoading(false)
-      setError("Network error: " + (err && err.message ? err.message : String(err)))
     }
   }
 
@@ -100,36 +63,13 @@ function AuthCard({ onLoginSuccess }) {
     setError("")
     setLoading(true)
     try {
-      const resp = await fetch(`${backend}/auth/otp/verify`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.toLowerCase().trim(), code: otp }),
-        credentials: "include",
-      })
-
-      if (resp.ok) {
-        // Logged in; call callback to update app state
-        if (onLoginSuccess) {
-          onLoginSuccess()
-        } else {
-          window.location.href = "/"
-        }
-        return
-      }
-
-      const text = await resp.text().catch(() => "")
-      console.debug("OTP verify response", { url: `${backend}/auth/otp/verify`, status: resp.status, body: text })
-      let data = {}
-      try {
-        data = JSON.parse(text || "{}")
-      } catch (e) {
-        data = {}
-      }
-      setLoading(false)
-      setError((data && data.detail) || `Verification failed (${resp.status})`)
+      await api.auth.verifyOtp(email.toLowerCase().trim(), otp)
+      // token is stored inside api.auth.verifyOtp
+      if (onLoginSuccess) onLoginSuccess()
     } catch (err) {
+      setError(err.message || "Verification failed")
+    } finally {
       setLoading(false)
-      setError("Network error contacting backend")
     }
   }
 
@@ -138,32 +78,22 @@ function AuthCard({ onLoginSuccess }) {
     setError("")
     setLoading(true)
     try {
-      const resp = await fetch(`${backend}/auth/otp/send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.toLowerCase().trim() }),
-        credentials: "include",
-      })
-      if (resp.ok) {
-        setResendTimer(30)
-        setCanResend(false)
-        setLoading(false)
-        return
-      }
-      const text = await resp.text().catch(() => "")
-      console.debug("OTP resend response", { url: `${backend}/auth/otp/send`, status: resp.status, body: text })
-      let data = {}
-      try {
-        data = JSON.parse(text || "{}")
-      } catch (e) {
-        data = {}
-      }
-      setLoading(false)
-      setError((data && data.detail) || `Failed to resend (${resp.status})`)
+      await api.auth.requestOtp(email.toLowerCase().trim())
+      setResendTimer(30)
+      setCanResend(false)
     } catch (err) {
+      setError(err.message || "Failed to resend OTP")
+    } finally {
       setLoading(false)
-      setError("Network error contacting backend")
     }
+  }
+
+  const switchRole = (newRole) => {
+    setRole(newRole)
+    setEmail("")
+    setError("")
+    setOtpStep(false)
+    setOtp("")
   }
 
   return (
@@ -175,13 +105,7 @@ function AuthCard({ onLoginSuccess }) {
         <button
           type="button"
           className={role === "student" ? "active" : ""}
-          onClick={() => {
-            setRole("student")
-            setEmail("")
-            setError("")
-            setOtpStep(false)
-            setOtp("")
-          }}
+          onClick={() => switchRole("student")}
           disabled={loading}
         >
           Student
@@ -189,13 +113,7 @@ function AuthCard({ onLoginSuccess }) {
         <button
           type="button"
           className={role === "professor" ? "active" : ""}
-          onClick={() => {
-            setRole("professor")
-            setEmail("")
-            setError("")
-            setOtpStep(false)
-            setOtp("")
-          }}
+          onClick={() => switchRole("professor")}
           disabled={loading}
         >
           Professor
@@ -218,12 +136,12 @@ function AuthCard({ onLoginSuccess }) {
             <label>OTP Code</label>
             <input
               type="text"
-              placeholder="Enter OTP"
+              placeholder="Enter 6-digit code"
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
               required
+              maxLength={6}
             />
-
             <button
               type="button"
               className="resend-btn"
@@ -243,11 +161,9 @@ function AuthCard({ onLoginSuccess }) {
       </form>
 
       <hr />
-
       <p className="terms">
         By continuing, you agree to our <a>Terms of Service</a> and <a>Privacy Policy</a>
       </p>
-
       <p className="support">Need help? <a>Contact Support</a></p>
     </div>
   )
