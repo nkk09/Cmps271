@@ -16,7 +16,7 @@ class EntraAuthClient:
     """Client for Entra ID OAuth2 flow."""
 
     def __init__(self):
-        self.authority = f"https://login.microsoftonline.com/{settings.ENTRA_TENANT_ID}"
+        self.authority = settings.ENTRA_AUTHORITY
         self.token_url = f"{self.authority}/oauth2/v2.0/token"
         self.authorize_url = f"{self.authority}/oauth2/v2.0/authorize"
 
