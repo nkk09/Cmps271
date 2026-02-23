@@ -4,7 +4,7 @@ function LeftPanel() {
       <div className="logo">
         <span className="logo-icon">📖</span>
         <div>
-          <h3>AUB Course Review</h3>
+          <h3>AfterClass</h3>
           <p>Student Community Platform</p>
         </div>
       </div>
@@ -34,7 +34,7 @@ function LeftPanel() {
         </div>
       </div>
 
-      <footer>© 2026 AUB Course Review. Made by students, for students.</footer>
+      <footer>© 2026 AfterClass. Made by students, for students.</footer>
     </div>
   )
 }

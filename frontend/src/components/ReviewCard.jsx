@@ -6,11 +6,11 @@ import React from "react"
  * reaction: "like" | "dislike" | null
  * onReact: (nextReaction) => void   — called with null to remove reaction
  */
-function ReviewCard({ review, reaction, onReact }) {
+function ReviewCard({ review, reaction, onReact, disableInteract = false }) {
   const net = (review.likes ?? 0) - (review.dislikes ?? 0)
 
-  const handleLike = () => onReact(reaction === "like" ? null : "like")
-  const handleDislike = () => onReact(reaction === "dislike" ? null : "dislike")
+  const handleLike = () => { if (!disableInteract) onReact(reaction === "like" ? null : "like") }
+  const handleDislike = () => { if (!disableInteract) onReact(reaction === "dislike" ? null : "dislike") }
 
   return (
     <div
@@ -52,6 +52,8 @@ function ReviewCard({ review, reaction, onReact }) {
           type="button"
           onClick={handleLike}
           aria-pressed={reaction === "like"}
+          disabled={disableInteract}
+          title={disableInteract ? "You can't react to your own review" : ""}
           style={{
             padding: "0.45rem 0.9rem",
             borderRadius: "8px",
@@ -59,9 +61,10 @@ function ReviewCard({ review, reaction, onReact }) {
             borderColor: reaction === "like" ? "#16a34a" : "#d1d5db",
             background: reaction === "like" ? "#dcfce7" : "transparent",
             color: reaction === "like" ? "#16a34a" : "#555",
-            cursor: "pointer",
+            cursor: disableInteract ? "not-allowed" : "pointer",
             fontWeight: 500,
             fontSize: "0.875rem",
+            opacity: disableInteract ? 0.45 : 1,
             transition: "all 0.15s",
           }}
         >
@@ -72,6 +75,8 @@ function ReviewCard({ review, reaction, onReact }) {
           type="button"
           onClick={handleDislike}
           aria-pressed={reaction === "dislike"}
+          disabled={disableInteract}
+          title={disableInteract ? "You can't react to your own review" : ""}
           style={{
             padding: "0.45rem 0.9rem",
             borderRadius: "8px",
@@ -79,9 +84,10 @@ function ReviewCard({ review, reaction, onReact }) {
             borderColor: reaction === "dislike" ? "#dc2626" : "#d1d5db",
             background: reaction === "dislike" ? "#fee2e2" : "transparent",
             color: reaction === "dislike" ? "#dc2626" : "#555",
-            cursor: "pointer",
+            cursor: disableInteract ? "not-allowed" : "pointer",
             fontWeight: 500,
             fontSize: "0.875rem",
+            opacity: disableInteract ? 0.45 : 1,
             transition: "all 0.15s",
           }}
         >

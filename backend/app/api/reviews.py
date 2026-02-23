@@ -104,7 +104,7 @@ async def update_review(
     db: DBDep,
     student: CurrentStudent,
 ):
-    """Edit your own review. Resets it to pending for re-moderation."""
+    """Edit your own review."""
     review = await crud.reviews.get_by_id(db, review_id)
     if not review:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
@@ -191,6 +191,8 @@ async def _interact(db, review_id: uuid.UUID, student_id: uuid.UUID, interaction
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
     if review.status != "approved":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot interact with a non-approved review")
+    if review.student_id == student_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You cannot like or dislike your own review")
 
     interaction = await crud.review_interactions.upsert(
         db, review=review, student_id=student_id, interaction_type=interaction_type

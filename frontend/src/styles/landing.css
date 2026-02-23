@@ -450,3 +450,36 @@
 .course-card button[aria-pressed] {
   color: #333;
 }
+
+/* Collapsible section toggle */
+.section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  margin-bottom: 25px;
+  text-align: left;
+}
+
+.section-toggle h2 {
+  font-size: 24px;
+  color: #333;
+  font-weight: 600;
+}
+
+.toggle-chevron {
+  font-size: 20px;
+  color: #8b1538;
+  transition: transform 0.25s ease;
+  display: inline-block;
+  line-height: 1;
+  transform: rotate(-90deg);
+}
+
+.toggle-chevron.open {
+  transform: rotate(0deg);
+}

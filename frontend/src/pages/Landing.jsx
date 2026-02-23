@@ -23,6 +23,7 @@ function Landing({ user, onLogout }) {
   const [departments, setDepartments] = useState([])
   const [loadingCourses, setLoadingCourses] = useState(true)
   const [courseError, setCourseError] = useState("")
+  const [coursesOpen, setCoursesOpen] = useState(true)
 
   // Recent reviews (student's own reviews shown on landing)
   const [recentReviews, setRecentReviews] = useState([])
@@ -111,7 +112,7 @@ function Landing({ user, onLogout }) {
       <header className="landing-header">
         <div className="header-content">
           <div className="logo-section">
-            <h1 className="logo-title">📚 AUB Reviews</h1>
+            <h1 className="logo-title">📚 AfterClass</h1>
           </div>
           <div className="profile-section">
             <div className="user-profile">
@@ -158,11 +159,18 @@ function Landing({ user, onLogout }) {
 
         {/* Courses */}
         <div className="courses-section">
-          <h2>{selectedDepartment ? `${selectedDepartment} Courses` : "All Courses"}</h2>
+          <button
+            className="section-toggle"
+            onClick={() => setCoursesOpen((o) => !o)}
+            aria-expanded={coursesOpen}
+          >
+            <h2 style={{ margin: 0 }}>{selectedDepartment ? `${selectedDepartment} Courses` : "All Courses"}</h2>
+            <span className={`toggle-chevron ${coursesOpen ? "open" : ""}`}>▾</span>
+          </button>
           {courseError && <div className="error-message">{courseError}</div>}
-          {loadingCourses ? (
+          {coursesOpen && loadingCourses ? (
             <div className="loading">Loading courses...</div>
-          ) : filteredCourses.length > 0 ? (
+          ) : coursesOpen && filteredCourses.length > 0 ? (
             <div className="courses-grid">
               {filteredCourses.map((course) => (
                 <div key={course.id} className="course-card">
@@ -191,11 +199,11 @@ function Landing({ user, onLogout }) {
                 </div>
               ))}
             </div>
-          ) : (
+          ) : coursesOpen ? (
             <div className="no-courses">
               <p>No courses found. Try adjusting your search or filter.</p>
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* My Recent Reviews — only shown to students */}
@@ -224,6 +232,7 @@ function Landing({ user, onLogout }) {
                       }}
                       reaction={myInteraction}
                       onReact={(next) => handleInteract(review.id, next, myInteraction)}
+                      disableInteract={true}
                     />
                   )
                 })}

@@ -1,5 +1,5 @@
 /**
- * API client for AUB Reviews backend.
+ * API client for AfterClass backend.
  * Uses JWT Bearer tokens stored in localStorage.
  */
 

@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     ## app ##
-    APP_NAME: str = "AUB Reviews"
+    APP_NAME: str = "AfterClass"
     ENV: str = "dev"
 
     ## auth ##

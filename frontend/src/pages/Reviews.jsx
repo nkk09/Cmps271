@@ -160,6 +160,7 @@ function Reviews({ user }) {
 
   return (
     <div className="reviews-page">
+      <div className="reviews-inner">
       <header className="reviews-header">
         <h1>📝 Course &amp; Professor Reviews</h1>
         {isStudent && (
@@ -322,15 +323,13 @@ function Reviews({ user }) {
                 }}
                 reaction={myInteraction}
                 onReact={(next) => handleInteract(review.id, next, myInteraction)}
+                disableInteract={isMyReview}
               />
 
               {/* Extra metadata row below the card */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "-0.5rem", marginBottom: "0.5rem", padding: "0 0.25rem" }}>
                 <span style={{ fontSize: "0.8rem", opacity: 0.7 }}>
                   @{review.student?.username || "anonymous"}
-                  {review.status === "pending" && (
-                    <span style={{ marginLeft: "0.5rem", color: "#f59e0b", fontWeight: 600 }}>· Pending approval</span>
-                  )}
                 </span>
                 {isMyReview && (
                   <button
@@ -352,6 +351,7 @@ function Reviews({ user }) {
             </div>
           )
         })}
+      </div>
       </div>
     </div>
   )
