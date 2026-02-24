@@ -16,11 +16,11 @@ class EntraAuthClient:
     """Client for Entra ID OAuth2 flow."""
 
     def __init__(self):
-        self.authority = f"https://login.microsoftonline.com/{settings.ENTRA_TENANT_ID}"
+        self.authority = settings.ENTRA_AUTHORITY
         self.token_url = f"{self.authority}/oauth2/v2.0/token"
         self.authorize_url = f"{self.authority}/oauth2/v2.0/authorize"
 
-    def get_authorization_url(self, state: str, code_challenge: str) -> str:
+    def get_authorization_url(self, state: str, code_challenge: str, login_hint: str | None = None) -> str:
         """
         Generate the Entra ID authorization URL for user login.
         Uses PKCE for enhanced security.
@@ -35,7 +35,11 @@ class EntraAuthClient:
             "code_challenge_method": "S256",
             "prompt": "select_account",  # Always show account selection
         }
-        query_string = "&".join(f"{k}={v}" for k, v in params.items())
+        if login_hint:
+            params["login_hint"] = login_hint
+        # Build URL-encoded query string safely
+        from urllib.parse import urlencode
+        query_string = urlencode(params)
         return f"{self.authorize_url}?{query_string}"
 
     async def exchange_code_for_token(

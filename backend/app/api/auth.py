@@ -1,344 +1,366 @@
-import json
+"""
+Auth routes — Microsoft Entra ID OAuth2 + OTP email fallback.
+
+Entra flow (primary):
+  1. GET  /auth/login      → redirect to Microsoft login page
+  2. GET  /auth/callback   → exchange code for token, return JWT
+
+OTP flow (fallback if ENABLE_OAUTH=false):
+  1. POST /auth/request-otp → send code by email
+  2. POST /auth/verify-otp  → verify code, return JWT
+
+  3. POST /auth/logout      → client discards JWT (stateless)
+
+Privacy rules:
+  - Plaintext email addresses are NEVER written to logs.
+  - All log lines that reference a user identity use the HMAC blind index only.
+"""
+
+import asyncio
+import hashlib
+import hmac as hmac_mod
+import os
 import secrets
-import base64
-import random
 import smtplib
-from email.message import EmailMessage
-from datetime import datetime, timedelta
+from base64 import urlsafe_b64encode
+from email.mime.text import MIMEText
 from urllib.parse import urlencode
-from fastapi import APIRouter, Response, Request, status, HTTPException, Query, Depends, Body
-from fastapi.responses import RedirectResponse, JSONResponse
-from sqlalchemy.orm import Session
+
+from fastapi import APIRouter, HTTPException, Query, status
+from fastapi.responses import RedirectResponse
+
+from app.dependencies import DBDep
+from app.schemas import OTPRequest, OTPVerify, TokenResponse
+from app.core.jwt import create_access_token
 from app.core.config import settings
-from app.core.logger import get_logger
-from app.core.session import set_login_cookie, clear_login_cookie, require_user
-from app.core.database import get_db
+from app.core.encryption import blind_index
 from app.core.oauth2 import entra_client, decode_id_token
-from app.models.user import User
-from app.models.otp import OTP
+from app.core.logger import get_logger
+from app import crud
 
-router = APIRouter()
 logger = get_logger(__name__)
+router = APIRouter(prefix="/auth", tags=["auth"])
 
-# Cookie names for OAuth state/PKCE storage
-PKCE_STATE_COOKIE = "oauth_pkce_state"
-PKCE_CODE_VERIFIER_COOKIE = "oauth_code_verifier"
-
-
-def _generate_pkce_pair() -> tuple[str, str]:
-    """Generate PKCE code_verifier and code_challenge."""
-    code_verifier = base64.urlsafe_b64encode(secrets.token_bytes(32)).decode("utf-8").rstrip("=")
-    code_challenge = base64.urlsafe_b64encode(
-        __import__("hashlib").sha256(code_verifier.encode()).digest()
-    ).decode("utf-8").rstrip("=")
-    return code_verifier, code_challenge
+# ---------------------------------------------------------------------------
+# In-process PKCE / state store
+# Each entry: { "code_verifier": str, "expires_at": float }
+# Entries are tiny and short-lived (5 min); cleaned up on each /login hit.
+# ---------------------------------------------------------------------------
+_pending_states: dict[str, dict] = {}
+_STATE_TTL = 300  # seconds
 
 
-def _get_pkce_from_cookies(request: Request) -> tuple[str, str]:
-    """Extract PKCE state and verifier from cookies."""
-    state = request.cookies.get(PKCE_STATE_COOKIE)
-    code_verifier = request.cookies.get(PKCE_CODE_VERIFIER_COOKIE)
-    if not state or not code_verifier:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Missing PKCE state or code_verifier"
-        )
-    return state, code_verifier
+def _pkce_pair() -> tuple[str, str]:
+    """Return (code_verifier, code_challenge) using S256 method."""
+    verifier = secrets.token_urlsafe(64)
+    digest = hashlib.sha256(verifier.encode()).digest()
+    challenge = urlsafe_b64encode(digest).rstrip(b"=").decode()
+    return verifier, challenge
 
 
-def _is_allowed_domain(email: str) -> bool:
-    e = email.lower()
-    return e.endswith("@mail.aub.edu") or e.endswith("@aub.edu.lb")
+def _purge_stale_states() -> None:
+    import time
+    now = time.time()
+    stale = [k for k, v in _pending_states.items() if v["expires_at"] < now]
+    for k in stale:
+        del _pending_states[k]
 
 
-def _role_from_email(email: str) -> str:
-    e = email.lower()
-    if e.endswith("@mail.aub.edu"):
-        return "student"
-    return "professor"
-
-
-def _send_otp_email(email: str, code: str) -> bool:
-    """
-    Attempt to send OTP over SMTP. Always logs the OTP for dev/debugging.
-    Returns True if sent successfully, False if not (or not configured).
-    """
-    logger.info(f"OTP code for {email}: {code} (expires in {settings.OTP_EXPIRY_MINUTES} min)")
-    
-    # If SMTP not configured, just log the code (for dev/testing)
-    if not settings.SMTP_HOST or not settings.SMTP_PORT:
-        logger.warning(f"SMTP not configured; OTP code logged above for {email}")
-        return False
-    
-    try:
-        msg = EmailMessage()
-        msg["Subject"] = "Your AUB Reviews OTP"
-        msg["From"] = settings.SMTP_FROM or "noreply@aub.edu.lb"
-        msg["To"] = email
-        msg.set_content(
-            f"Your one-time code is:\n\n  {code}\n\n"
-            f"It expires in {settings.OTP_EXPIRY_MINUTES} minutes. "
-            f"Do not share this code with anyone."
-        )
-
-        with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10) as s:
-            if settings.SMTP_USER and settings.SMTP_PASS:
-                s.starttls()
-                s.login(settings.SMTP_USER, settings.SMTP_PASS)
-            s.send_message(msg)
-        
-        logger.info(f"OTP email sent successfully to {email}")
-        return True
-        
-    except smtplib.SMTPAuthenticationError as e:
-        logger.error(f"SMTP auth failed: {e} (check SMTP_USER/SMTP_PASS)")
-        return False
-    except smtplib.SMTPException as e:
-        logger.error(f"SMTP error: {e}")
-        return False
-    except Exception as e:
-        logger.error(f"Failed to send OTP email: {e}")
-        return False
-
+# ---------------------------------------------------------------------------
+# Entra OAuth2 routes
+# ---------------------------------------------------------------------------
 
 @router.get("/login")
-def login():
+async def login():
     """
-    Initiates OAuth2 flow with Entra ID.
-    Redirects user to Microsoft login page for AUB account.
+    Redirect the user to the Microsoft Entra ID login page.
+    Requires ENABLE_OAUTH=true and all ENTRA_* variables set in .env.
     """
-    if not settings.ENABLE_OAUTH:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="OAuth is disabled")
+    if not entra_client:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="OAuth is not enabled. Set ENABLE_OAUTH=true in .env.",
+        )
 
-    code_verifier, code_challenge = _generate_pkce_pair()
+    import time
+    _purge_stale_states()
+
     state = secrets.token_urlsafe(32)
-    
-    # Generate authorization URL
-    auth_url = entra_client.get_authorization_url(state, code_challenge)
-    
-    # Create redirect response
-    response = RedirectResponse(url=auth_url, status_code=status.HTTP_302_FOUND)
-    
-    # Set PKCE cookies on the redirect response
-    response.set_cookie(
-        PKCE_STATE_COOKIE,
-        state,
-        httponly=True,
-        secure=False,  # True in production
-        samesite="lax",
-        max_age=600,  # 10 minutes
-        path="/",
-    )
-    response.set_cookie(
-        PKCE_CODE_VERIFIER_COOKIE,
-        code_verifier,
-        httponly=True,
-        secure=False,  # True in production
-        samesite="lax",
-        max_age=600,  # 10 minutes
-        path="/",
-    )
-    
-    logger.info(f"Login: redirecting to Entra, state={state[:8]}...")
-    return response
+    code_verifier, code_challenge = _pkce_pair()
 
+    _pending_states[state] = {
+        "code_verifier": code_verifier,
+        "expires_at": time.time() + _STATE_TTL,
+    }
 
-@router.get("/me")
-def me(request: Request):
-    user = require_user(request, settings.SESSION_SECRET)
-    logger.debug("Me called, user resolved")
-    return {"user": user}
-
-
-@router.post("/logout")
-def logout(response: Response):
-    clear_login_cookie(response)
-    logger.info("Logout: session cookie cleared")
-    return {"ok": True}
-
-
-@router.post("/otp/send")
-def otp_send(payload: dict = Body(...), db: Session = Depends(get_db)):
-    """
-    Send a one-time code to the provided email if domain is allowed.
-    Includes rate-limiting: max 3 OTPs per email per hour.
-    """
-    if settings.ENABLE_OAUTH:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="OTP disabled when OAuth is enabled")
-
-    email = (payload or {}).get("email", "").strip()
-    if not email:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing email")
-
-    if not _is_allowed_domain(email):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email domain not allowed (must be @mail.aub.edu or @aub.edu.lb)")
-
-    # Rate limiting: max 3 OTPs per email per hour
-    # TEMPORARILY DISABLED FOR TESTING
-    # recent_count = OTP.count_recent_for_email(db, email, minutes=60)
-    # if recent_count >= 3:
-    #     logger.warning(f"Rate limit exceeded for OTP send: {email}")
-    #     raise HTTPException(
-    #         status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-    #         detail="Too many OTP requests. Please try again in 1 hour."
-    #     )
-
-    # Clean up any expired OTPs before creating a new one
-    OTP.cleanup_expired(db)
-
-    # Generate 6-digit OTP code
-    code = f"{random.randint(0, 999999):06d}"
-    expires_at = datetime.utcnow() + timedelta(minutes=settings.OTP_EXPIRY_MINUTES)
-    
-    otp_record = OTP.create(db, email, code, expires_at)
-    _send_otp_email(email, code)
-
-    logger.info(f"OTP created for {email}, expires at {expires_at.isoformat()}")
-    return {"ok": True, "message": "OTP sent to your email"}
-
-
-@router.post("/otp/verify")
-def otp_verify(response: Response, payload: dict = Body(...), db: Session = Depends(get_db)):
-    """
-    Verify OTP code and create user session.
-    Enforces max 5 failed attempts per OTP before expiry.
-    """
-    try:
-        if settings.ENABLE_OAUTH:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="OTP disabled when OAuth is enabled")
-
-        email = (payload or {}).get("email", "").strip()
-        code = (payload or {}).get("code", "").strip()
-        
-        if not email or not code:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing email or code")
-
-        # Retrieve latest non-expired OTP for this email
-        otp_record = OTP.get_latest_for_email(db, email)
-        if not otp_record:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No valid OTP found for this email")
-
-        # Check if OTP is expired
-        if OTP.is_expired(otp_record):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="OTP has expired")
-
-        # Check attempt limit (max 5 wrong attempts)
-        if otp_record.attempts >= 5:
-            raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too many failed attempts. Request a new OTP.")
-
-        # Verify code
-        if otp_record.code != str(code):
-            otp_record.attempts += 1
-            db.commit()
-            remaining = 5 - otp_record.attempts
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid OTP code. {remaining} attempts remaining.")
-
-        # OTP is valid: create or update user
-        role = _role_from_email(email)
-        entra_oid = f"local:{email.lower()}"
-        user = User.create_or_update(db, entra_oid=entra_oid, entra_email=email.lower(), role=role)
-
-        # Mark OTP as verified and consumed
-        otp_record.verified_at = datetime.utcnow()
-        db.commit()
-
-        session_data = {
-            "user_id": user.id,
-            "username": user.username,
-            "role": user.role,
-            "entra_oid": user.entra_oid,
-        }
-
-        # Set login session cookie
-        set_login_cookie(response, settings.SESSION_SECRET, session_data)
-
-        logger.info(f"OTP verified and user logged in: {user.username} ({user.entra_email})")
-        return {"ok": True, "user": session_data}
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Unexpected error in otp_verify: {e}", exc_info=True)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+    url = entra_client.get_authorization_url(state=state, code_challenge=code_challenge)
+    return RedirectResponse(url=url, status_code=302)
 
 
 @router.get("/callback")
-async def callback(request: Request, code: str = Query(...), state: str = Query(...), db: Session = Depends(get_db)):
+async def oauth_callback(
+    code: str = Query(...),
+    state: str = Query(...),
+    db: DBDep = None,
+):
     """
-    OAuth2 callback endpoint.
-    Exchanges authorization code for tokens, saves user to DB, and creates session.
+    Handle the redirect back from Microsoft after the user authenticates.
+    Exchanges the authorization code for tokens, creates or retrieves the user,
+    and returns a JWT — same shape as the OTP verify endpoint.
     """
-    try:
-        # Verify state parameter
-        stored_state, code_verifier = _get_pkce_from_cookies(request)
-        if state != stored_state:
-            logger.warning(f"State mismatch: {state} != {stored_state}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="State parameter mismatch"
-            )
-        
-        # Exchange code for tokens
-        logger.debug(f"Callback: exchanging code for tokens")
-        token_response = await entra_client.exchange_code_for_token(code, code_verifier)
-        
-        id_token = token_response.get("id_token")
-        if not id_token:
-            logger.error("No id_token in token response")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to obtain ID token"
-            )
-        
-        # Decode ID token and extract user info
-        claims = decode_id_token(id_token)
-        entra_info = entra_client.extract_user_info(claims)
-        
-        # Save or update user in database
-        user = User.create_or_update(
-            db,
-            entra_oid=entra_info["user_id"],
-            entra_email=entra_info["email"],
-            role=entra_info["role"]
+    if not entra_client:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="OAuth is not enabled.",
         )
-        
-        logger.info(f"Callback: authenticated user {user.username} (entra_email: {entra_info['email']}, role: {user.role})")
-        
-        # Session data: use anonymous username, not email
-        session_data = {
-            "user_id": user.id,
-            "username": user.username,
-            "role": user.role,
-            "entra_oid": user.entra_oid,
-        }
-        
-        # Create JSON response with anonymous user info
-        response_data = {"ok": True, "user": session_data}
-        response = JSONResponse(content=response_data)
-        
-        # Clear PKCE cookies
-        response.delete_cookie(PKCE_STATE_COOKIE, path="/")
-        response.delete_cookie(PKCE_CODE_VERIFIER_COOKIE, path="/")
-        
-        # Set login session cookie
-        set_login_cookie(response, settings.SESSION_SECRET, session_data)
-        
-        return response
-    
-    except Exception as e:
-        logger.error(f"Callback error: {e}")
+
+    # Validate state and retrieve PKCE verifier
+    entry = _pending_states.pop(state, None)
+    if entry is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
+            detail="Invalid or expired OAuth state. Please try logging in again.",
         )
 
+    import time
+    if entry["expires_at"] < time.time():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="OAuth state expired. Please try logging in again.",
+        )
 
-@router.post("/admin/cleanup-otps")
-def admin_cleanup_otps(db: Session = Depends(get_db)):
-    """
-    Admin endpoint to manually clean up expired OTP records.
-    Use this for maintenance in production.
-    """
-    count = OTP.cleanup_expired(db)
-    logger.info(f"Admin requested OTP cleanup: {count} records deleted")
-    return {"ok": True, "deleted": count}
+    # Exchange code for tokens
+    try:
+        token_response = await entra_client.exchange_code_for_token(
+            code=code,
+            code_verifier=entry["code_verifier"],
+        )
+    except Exception as e:
+        logger.error(f"Entra token exchange failed: {type(e).__name__}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Failed to exchange authorization code. Please try again.",
+        )
 
+    # Decode the ID token to get user claims
+    id_token = token_response.get("id_token")
+    if not id_token:
+        logger.error("Entra token response missing id_token")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="No ID token in response from Microsoft.",
+        )
+
+    try:
+        claims = decode_id_token(id_token)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to decode Microsoft ID token.",
+        )
+
+    email = (claims.get("email") or claims.get("preferred_username") or "").lower().strip()
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No email address returned by Microsoft.",
+        )
+
+    # Determine role from AUB email domain
+    if email.endswith("@mail.aub.edu"):
+        role_name = "student"
+    elif email.endswith("@aub.edu.lb"):
+        role_name = "professor"
+    else:
+        logger.warning(f"OAuth login rejected — unrecognised email domain, index={blind_index(email)}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only AUB email addresses (@mail.aub.edu or @aub.edu.lb) are allowed.",
+        )
+
+    idx = blind_index(email)
+
+    # Get or create user
+    user = await crud.users.get_by_email(db, email)
+    is_new = user is None
+
+    if is_new:
+        user = await crud.users.create(db, email=email)
+
+        if role_name == "student":
+            await crud.students.create(db, user_id=user.id)
+        else:
+            # Professor accounts are created but need to be linked to a
+            # professor record manually (or via an admin flow later).
+            pass
+
+        role = await crud.roles.get_role_by_name(db, role_name)
+        if role:
+            await crud.roles.assign_role_to_user(db, user_id=user.id, role_id=role.id)
+
+        logger.info(f"New user created via OAuth — role={role_name} email_index={idx}")
+
+    await crud.users.update_last_login(db, user)
+    await db.commit()
+
+    roles = await crud.roles.get_user_roles(db, user.id)
+    primary_role = roles[0].role if roles else role_name
+
+    token = create_access_token(user_id=user.id, role=primary_role)
+    logger.info(f"OAuth login successful — email_index={idx}")
+
+    # Redirect to frontend with token in query param.
+    # The frontend reads it once, stores it in localStorage, then cleans the URL.
+    frontend_url = settings.FRONTEND_URL or "http://localhost:5173"
+    redirect_url = f"{frontend_url}/auth/callback?token={token}"
+    return RedirectResponse(url=redirect_url, status_code=302)
+
+
+# ---------------------------------------------------------------------------
+# OTP routes (fallback when ENABLE_OAUTH=false)
+# ---------------------------------------------------------------------------
+
+@router.post("/request-otp", status_code=status.HTTP_200_OK)
+async def request_otp(body: OTPRequest, db: DBDep):
+    """
+    Request an OTP for the given email. The code is sent by email.
+    Rate-limited. Returns 200 regardless of email existence to prevent enumeration.
+    """
+    email = body.email.lower().strip()
+    idx = blind_index(email)
+
+    # If OAuth is enabled we short-circuit to the Entra login flow.
+    # Only allow AUB student emails for OAuth-initiated sign-in.
+    if settings.ENABLE_OAUTH:
+        if not entra_client:
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                detail="OAuth is not enabled. Check ENTRA_ settings in .env.",
+            )
+
+        # Accept only student AUB emails for this path as requested
+        if not email.endswith("@mail.aub.edu"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="OAuth sign-in is only allowed for @mail.aub.edu addresses.",
+            )
+
+        # Create PKCE + state and store it so /callback can validate
+        import time
+        _purge_stale_states()
+        state = secrets.token_urlsafe(32)
+        code_verifier, code_challenge = _pkce_pair()
+        _pending_states[state] = {
+            "code_verifier": code_verifier,
+            "expires_at": time.time() + _STATE_TTL,
+        }
+
+        auth_url = entra_client.get_authorization_url(state=state, code_challenge=code_challenge, login_hint=email)
+        return {"oauth": True, "auth_url": auth_url}
+
+    if await crud.otps.is_rate_limited(db, email):
+        logger.warning(f"OTP rate limit hit — email_index={idx}")
+        return {"message": "If this email is registered, a code has been sent."}
+
+    otp, plain_code = await crud.otps.create(db, email=email)
+    await db.commit()
+
+    sent = await _send_otp_email(email, plain_code)
+    if not sent:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Failed to send OTP email. Check SMTP settings in .env.",
+        )
+
+    logger.info(f"OTP issued — email_index={idx}")
+    return {"message": "A verification code has been sent to your email."}
+
+
+@router.post("/verify-otp", response_model=TokenResponse)
+async def verify_otp(body: OTPVerify, db: DBDep):
+    """
+    Verify an OTP code. On success, returns a JWT access token.
+    New users get a student profile created automatically.
+    """
+    email = body.email.lower().strip()
+    idx = blind_index(email)
+
+    success, otp, error = await crud.otps.verify(db, email=email, plain_code=body.code)
+
+    if not success:
+        error_messages = {
+            "not_found":    "No active OTP found for this email. Please request a new code.",
+            "expired":      "This code has expired. Please request a new one.",
+            "max_attempts": "Too many failed attempts. Please request a new code.",
+            "invalid_code": "Invalid code.",
+        }
+        logger.warning(f"OTP verification failed ({error}) — email_index={idx}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=error_messages.get(error, "Verification failed."),
+        )
+
+    user = await crud.users.get_by_email(db, email)
+    is_new = user is None
+
+    if is_new:
+        user = await crud.users.create(db, email=email)
+        await crud.students.create(db, user_id=user.id)
+        role = await crud.roles.get_role_by_name(db, "student")
+        if role:
+            await crud.roles.assign_role_to_user(db, user_id=user.id, role_id=role.id)
+        logger.info(f"New user created via OTP — email_index={idx}")
+
+    await crud.users.update_last_login(db, user)
+
+    if otp and otp.user_id is None:
+        otp.user_id = user.id
+
+    await db.commit()
+
+    roles = await crud.roles.get_user_roles(db, user.id)
+    primary_role = roles[0].role if roles else "student"
+
+    token = create_access_token(user_id=user.id, role=primary_role)
+    logger.info(f"OTP verified, token issued — email_index={idx}")
+    return TokenResponse(access_token=token)
+
+
+@router.post("/logout", status_code=status.HTTP_200_OK)
+async def logout():
+    """Logout — JWT is stateless, client discards the token."""
+    return {"message": "Logged out successfully."}
+
+
+# ---------------------------------------------------------------------------
+# Email sending helper (OTP only)
+# ---------------------------------------------------------------------------
+
+async def _send_otp_email(email: str, code: str) -> bool:
+    if not all([settings.SMTP_HOST, settings.SMTP_PORT, settings.SMTP_USER, settings.SMTP_PASS]):
+        logger.error("SMTP not fully configured — set SMTP_HOST/PORT/USER/PASS in .env")
+        return False
+
+    def _send_blocking():
+        msg = MIMEText(
+            f"Your {settings.APP_NAME} verification code is: {code}\n\n"
+            f"This code expires in {settings.OTP_EXPIRY_MINUTES} minutes.\n"
+            f"If you didn't request this, you can safely ignore this email."
+        )
+        msg["Subject"] = f"Your {settings.APP_NAME} verification code"
+        msg["From"] = settings.SMTP_FROM or settings.SMTP_USER
+        msg["To"] = email
+
+        with smtplib.SMTP(settings.SMTP_HOST, int(settings.SMTP_PORT)) as server:
+            server.starttls()
+            server.login(settings.SMTP_USER, settings.SMTP_PASS)
+            server.send_message(msg)
+
+    idx = blind_index(email)
+    try:
+        await asyncio.get_event_loop().run_in_executor(None, _send_blocking)
+        logger.info(f"OTP email delivered — email_index={idx}")
+        return True
+    except Exception as e:
+        logger.error(f"OTP email delivery failed — email_index={idx} — {type(e).__name__}: {e}")
+        return False
