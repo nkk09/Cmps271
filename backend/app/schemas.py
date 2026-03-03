@@ -5,7 +5,24 @@ Pydantic schemas for request validation and response serialization.
 import uuid
 from datetime import datetime
 from typing import Optional, Literal
-from pydantic import BaseModel, EmailStr, Field, field_validator
+
+from pydantic import BaseModel, EmailStr, Field
+
+
+# ---------------------------------------------------------------------------
+# Admin Moderation
+# ---------------------------------------------------------------------------
+
+class MuteUserRequest(BaseModel):
+    minutes: int = Field(ge=1, le=60 * 24 * 30)  # up to 30 days
+
+
+class UserStatusOut(BaseModel):
+    id: uuid.UUID
+    is_blocked: bool
+    muted_until: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
 
 
 # ---------------------------------------------------------------------------
@@ -130,7 +147,6 @@ class SectionOut(BaseModel):
 
 
 class SectionOutBrief(BaseModel):
-    """Lighter version used when sections are nested under course/professor."""
     id: uuid.UUID
     section_number: str
     credits: Optional[int]
@@ -164,7 +180,6 @@ class ReviewOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     student: StudentOut
-    # The caller's interaction with this review (if authenticated student)
     my_interaction: Optional[Literal["like", "dislike"]] = None
 
     model_config = {"from_attributes": True}

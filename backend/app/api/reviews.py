@@ -3,15 +3,39 @@ Reviews routes — submit, edit, delete, like/dislike.
 """
 
 import uuid
-from typing import Optional, Literal
+from typing import Literal
 
-from fastapi import APIRouter, HTTPException, Query, status
+from datetime import datetime
+from fastapi import APIRouter, HTTPException, Query, status, Depends
 
-from app.dependencies import DBDep, CurrentUser, CurrentStudent, CurrentUserOptional
+from app.dependencies import DBDep, CurrentUserOptional, CurrentStudent
 from app.schemas import ReviewCreate, ReviewUpdate, ReviewOut, InteractionResponse
 from app import crud
 
 router = APIRouter(tags=["reviews"])
+
+
+# ---------------------------------------------------------------------------
+# Muted / Blocked enforcement
+# ---------------------------------------------------------------------------
+
+def enforce_not_muted_or_blocked(student: CurrentStudent):
+    """
+    Blocks review posting/editing/deleting if the user is blocked or muted.
+    """
+    user = getattr(student, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="No user linked to student")
+
+    if getattr(user, "is_blocked", False):
+        raise HTTPException(status_code=403, detail="User is blocked")
+
+    muted_until = getattr(user, "muted_until", None)
+    if muted_until and muted_until > datetime.utcnow():
+        raise HTTPException(
+            status_code=403,
+            detail=f"User is muted until {muted_until.isoformat()}",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -27,7 +51,6 @@ async def get_section_reviews(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=50),
 ):
-    """Get approved reviews for a section. Annotates with the caller's interaction if authenticated."""
     section = await crud.sections.get_by_id(db, section_id)
     if not section:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Section not found")
@@ -35,7 +58,6 @@ async def get_section_reviews(
     reviews = await crud.reviews.get_by_section(
         db, section_id, sort_by=sort_by, skip=skip, limit=limit
     )
-
     return await _annotate_interactions(db, reviews, user)
 
 
@@ -45,8 +67,8 @@ async def create_review(
     body: ReviewCreate,
     db: DBDep,
     student: CurrentStudent,
+    _=Depends(enforce_not_muted_or_blocked),
 ):
-    """Submit a review for a section. One review per student per section."""
     section = await crud.sections.get_by_id(db, section_id)
     if not section:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Section not found")
@@ -71,7 +93,7 @@ async def create_review(
 
 
 # ---------------------------------------------------------------------------
-# Reviews on a professor (read-only, aggregated across sections)
+# Reviews on a professor
 # ---------------------------------------------------------------------------
 
 @router.get("/professors/{professor_id}/reviews", response_model=list[ReviewOut])
@@ -103,8 +125,8 @@ async def update_review(
     body: ReviewUpdate,
     db: DBDep,
     student: CurrentStudent,
+    _=Depends(enforce_not_muted_or_blocked),
 ):
-    """Edit your own review."""
     review = await crud.reviews.get_by_id(db, review_id)
     if not review:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
@@ -128,8 +150,8 @@ async def delete_review(
     review_id: uuid.UUID,
     db: DBDep,
     student: CurrentStudent,
+    _=Depends(enforce_not_muted_or_blocked),
 ):
-    """Delete your own review."""
     review = await crud.reviews.get_by_id(db, review_id)
     if not review:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
@@ -156,7 +178,6 @@ async def dislike_review(review_id: uuid.UUID, db: DBDep, student: CurrentStuden
 
 @router.delete("/reviews/{review_id}/interaction", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_interaction(review_id: uuid.UUID, db: DBDep, student: CurrentStudent):
-    """Remove your like or dislike from a review."""
     review = await crud.reviews.get_by_id(db, review_id)
     if not review:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
@@ -176,7 +197,6 @@ async def get_my_reviews(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=50),
 ):
-    """Return the current student's own reviews (all statuses)."""
     reviews = await crud.reviews.get_by_student(db, student.id, skip=skip, limit=limit)
     return [ReviewOut.model_validate(r) for r in reviews]
 
@@ -194,7 +214,7 @@ async def _interact(db, review_id: uuid.UUID, student_id: uuid.UUID, interaction
     if review.student_id == student_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You cannot like or dislike your own review")
 
-    interaction = await crud.review_interactions.upsert(
+    await crud.review_interactions.upsert(
         db, review=review, student_id=student_id, interaction_type=interaction_type
     )
     await db.commit()
@@ -209,11 +229,9 @@ async def _interact(db, review_id: uuid.UUID, student_id: uuid.UUID, interaction
 
 
 async def _annotate_interactions(db, reviews, user) -> list[ReviewOut]:
-    """Attach the current user's interaction (like/dislike/None) to each review."""
     if not reviews:
         return []
 
-    student = None
     interaction_map = {}
 
     if user:
