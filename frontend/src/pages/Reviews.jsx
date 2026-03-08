@@ -160,6 +160,8 @@ function Reviews({ user }) {
   const isStudent = user?.roles?.includes("student")
   const studentId = user?.student?.id
 
+  const isAdmin = user?.roles?.includes("admin")
+
   // Load courses and professors once
   useEffect(() => {
     const fetchData = async () => {
@@ -454,8 +456,51 @@ function Reviews({ user }) {
           </div>
         )}
 
-        {/* Reviews List */}
-        <div className="reviews-list">
+        {/* Admin Recent Reviews */}
+{isAdmin && reviews.length > 0 && (
+  <>
+    <h2 style={{ marginTop: "1rem" }}>Recent Reviews (Admin)</h2>
+    <div className="reviews-list">
+      {reviews
+        .slice()
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .slice(0, 5)
+        .map((review) => {
+          const myInteraction = review.my_interaction ?? null
+          const isMyReview = !!(studentId && review.student?.id === studentId)
+          const courseCode = review.section?.course?.code || "Course"
+          const profName = review.section?.professor
+            ? `${review.section.professor.first_name} ${review.section.professor.last_name}`
+            : "Professor"
+
+          return (
+            <ReviewCard
+              key={review.id}
+              review={{
+                id: review.id,
+                course: courseCode,
+                professor: profName,
+                text: review.content,
+                likes: review.likes_count,
+                dislikes: review.dislikes_count,
+                createdAt: new Date(review.created_at).toLocaleDateString(),
+              }}
+              reaction={myInteraction}
+              onReact={(next) => handleInteract(review.id, next, myInteraction)}
+              disableInteract={isMyReview}
+              author={review.student?.username || "anonymous"}
+              isMyReview={isMyReview}
+              onDelete={() => handleDeleteReview(review.id)}
+              onEdit={(newContent) => handleEditReview(review.id, newContent)}
+            />
+          )
+        })}
+    </div>
+  </>
+)}
+
+{/* Normal Reviews List */}
+<div className="reviews-list">
           {loading && <div className="loading">Loading reviews...</div>}
 
           {!loading && (selectedCourse || selectedProfessor) && reviews.length === 0 && (
