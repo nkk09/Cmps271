@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
+
 from app.api.auth import router as auth_router
 from app.api.users import router as users_router
 from app.api.courses import (
@@ -15,6 +16,8 @@ from app.api.courses import (
     semesters_router,
 )
 from app.api.reviews import router as reviews_router
+from app.api.admin import router as admin_router
+
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -29,14 +32,14 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if settings.ENV == "dev" else [],  # tighten in prod
+    allow_origins=["*"] if settings.ENV == "dev" else [],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # ---------------------------------------------------------------------------
-# Routers
+# Routers (ALL under /api/v1)
 # ---------------------------------------------------------------------------
 
 app.include_router(auth_router,       prefix="/api/v1")
@@ -46,7 +49,11 @@ app.include_router(professors_router, prefix="/api/v1")
 app.include_router(sections_router,   prefix="/api/v1")
 app.include_router(semesters_router,  prefix="/api/v1")
 app.include_router(reviews_router,    prefix="/api/v1")
+app.include_router(admin_router,      prefix="/api/v1")
 
+# ---------------------------------------------------------------------------
+# Health check
+# ---------------------------------------------------------------------------
 
 @app.get("/health")
 async def health():
