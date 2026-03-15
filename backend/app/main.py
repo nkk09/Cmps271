@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
+
 from app.api.auth import router as auth_router
 from app.api.users import router as users_router
 from app.api.courses import (
@@ -30,14 +31,14 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if settings.ENV == "dev" else [],  # tighten in prod
+    allow_origins=["*"] if settings.ENV == "dev" else [],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # ---------------------------------------------------------------------------
-# Routers
+# Routers (ALL under /api/v1)
 # ---------------------------------------------------------------------------
 
 app.include_router(auth_router,       prefix="/api/v1")
@@ -49,6 +50,9 @@ app.include_router(semesters_router,  prefix="/api/v1")
 app.include_router(reviews_router,    prefix="/api/v1")
 app.include_router(violations_router, prefix="/api/v1")
 
+# ---------------------------------------------------------------------------
+# Health check
+# ---------------------------------------------------------------------------
 
 @app.get("/health")
 async def health():
