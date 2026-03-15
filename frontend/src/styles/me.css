@@ -1,7 +1,10 @@
+/* me.css - Updated Profile Page Styling */
+
 .me-page {
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start; /* start from top */
+  padding-top: 50px;
   min-height: 100vh;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
@@ -11,10 +14,10 @@
 
 .me-container {
   display: flex;
-  justify-content: center;
+  flex-direction: column; /* stack items vertically */
   align-items: center;
   width: 100%;
-  max-width: 500px;
+  max-width: 700px;
   padding: 20px;
 }
 
@@ -24,6 +27,7 @@
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
   padding: 40px;
   width: 100%;
+  margin-bottom: 40px;
 }
 
 .me-card h1 {
@@ -40,18 +44,32 @@
   margin-bottom: 30px;
 }
 
-.user-info p {
-  margin: 10px 0;
-  color: #555;
-  font-size: 16px;
+.info-item {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 15px;
 }
 
-.user-info strong {
-  color: #333;
+.info-item label {
   font-weight: 600;
+  color: #555;
+  margin-bottom: 5px;
 }
 
-.logout-btn {
+.info-item span {
+  color: #333;
+}
+
+.major-input {
+  width: 100%;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+}
+
+.logout-btn,
+.save-btn {
   width: 100%;
   padding: 12px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -62,14 +80,17 @@
   font-weight: 600;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
+  margin-top: 10px;
 }
 
-.logout-btn:hover {
+.logout-btn:hover,
+.save-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
 }
 
-.logout-btn:active {
+.logout-btn:active,
+.save-btn:active {
   transform: translateY(0);
 }
 
@@ -80,6 +101,100 @@
   margin-bottom: 20px;
 }
 
-.me-card button {
-  margin-top: 20px;
+.success {
+  color: #27ae60;
+  text-align: center;
+  font-size: 16px;
+  margin-bottom: 20px;
+}
+
+/* Violations Section */
+.violations-section,
+.my-reviews-section {
+  width: 100%;
+  margin-top: 40px;
+}
+
+.violations-section h2,
+.my-reviews-section h2 {
+  color: #333;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.violations-card {
+  background: #f5f5f5;
+  padding: 20px;
+  border-radius: 12px;
+  width: 100%;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+}
+
+.no-violations,
+.no-reviews {
+  color: #555;
+  text-align: center;
+  font-size: 16px;
+}
+
+/* Reviews */
+.review-card {
+  background: #f5f5f5;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  width: 100%;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.review-rating {
+  font-weight: 600;
+}
+
+.status-badge {
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+  color: white;
+}
+
+.status-approved { background: #27ae60; }
+.status-pending { background: #f39c12; }
+.status-rejected { background: #e74c3c; }
+
+.review-content {
+  color: #333;
+  font-size: 15px;
+  margin-bottom: 10px;
+}
+
+.review-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #777;
+}
+
+.delete-btn {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.delete-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
 }
