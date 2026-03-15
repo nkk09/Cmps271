@@ -107,6 +107,25 @@ const users = {
     const q = new URLSearchParams(params).toString()
     return request(`/users/me/reviews${q ? "?" + q : ""}`)
   },
+
+  async adminList(params = {}) {
+    const q = new URLSearchParams(params).toString()
+    return request(`/users/admin/list${q ? "?" + q : ""}`)
+  },
+
+  async adminUpdateRoles(userId, roles) {
+    return request(`/users/admin/${userId}/roles`, {
+      method: "PATCH",
+      body: JSON.stringify({ roles }),
+    })
+  },
+
+  async adminUpdateStatus(userId, statusValue) {
+    return request(`/users/admin/${userId}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: statusValue }),
+    })
+  },
 }
 
 // ---------------------------------------------------------------------------
@@ -224,8 +243,37 @@ const reviews = {
 }
 
 // ---------------------------------------------------------------------------
+// Violations
+// ---------------------------------------------------------------------------
+
+const violations = {
+  async report(reviewId, data) {
+    return request(`/reviews/${reviewId}/violations`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  },
+
+  async list(params = {}) {
+    const q = new URLSearchParams(params).toString()
+    return request(`/violations${q ? "?" + q : ""}`)
+  },
+
+  async get(violationId) {
+    return request(`/violations/${violationId}`)
+  },
+
+  async update(violationId, data) {
+    return request(`/violations/${violationId}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    })
+  },
+}
+
+// ---------------------------------------------------------------------------
 // Export
 // ---------------------------------------------------------------------------
 
-const api = { auth, users, courses, professors, sections, semesters, reviews, token }
+const api = { auth, users, courses, professors, sections, semesters, reviews, violations, token }
 export default api

@@ -214,6 +214,60 @@
   gap: 16px;
 }
 
+.report-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 14px;
+}
+
+.report-modal {
+  width: min(560px, 100%);
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.25);
+  padding: 22px;
+}
+
+.report-modal h2 {
+  margin: 0 0 14px;
+  color: #1f2937;
+}
+
+.report-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.report-cancel,
+.report-submit {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.report-cancel {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.report-submit {
+  background: linear-gradient(135deg, #8b1538, #5c0f25);
+  color: #fff;
+}
+
+.report-submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .reviews-page {

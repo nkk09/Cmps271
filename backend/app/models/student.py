@@ -85,6 +85,11 @@ class Student(Base):
     user: Mapped["User"] = relationship("User", back_populates="student")
     reviews: Mapped[list["Review"]] = relationship("Review", back_populates="student")
     review_interactions: Mapped[list["ReviewInteraction"]] = relationship("ReviewInteraction", back_populates="student")
+    reported_violations: Mapped[list["Violation"]] = relationship(
+        "Violation",
+        foreign_keys="Violation.reported_by_student_id",
+        back_populates="reported_by_student",
+    )
 
     def __repr__(self) -> str:
         return f"<Student(id={self.id}, username={self.username})>"

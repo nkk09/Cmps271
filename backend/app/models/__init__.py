@@ -12,6 +12,7 @@ from app.models.semester import Semester
 from app.models.section import Section
 from app.models.review import Review
 from app.models.review_interaction import ReviewInteraction
+from app.models.violation import Violation
 from app.models.otp import OTP
 
 __all__ = [
@@ -27,5 +28,6 @@ __all__ = [
     "Section",
     "Review",
     "ReviewInteraction",
+    "Violation",
     "OTP",
 ]

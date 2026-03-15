@@ -1,36 +1,25 @@
 import { useState, useEffect } from "react";
 import "../styles/landing.css";
-import { Link } from "react-router-dom";
-import { getCourses, getProfessors } from "../api";
+import api from "../api";
 
-function Landing({ user, onLogout }) {
+function Landing({ onViewCourseDetails, onViewProfessorReviews }) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
   const [courses, setCourses] = useState([]);
   const [filteredCourses, setFilteredCourses] = useState([]);
   const [professors, setProfessors] = useState([]);
   const [filteredProfessors, setFilteredProfessors] = useState([]);
 
-  const categories = [
-    { id: "all", name: "All Courses" },
-    { id: "computer-science", name: "Computer Science" },
-    { id: "mathematics", name: "Mathematics" },
-    { id: "engineering", name: "Engineering" },
-    { id: "business", name: "Business" },
-    { id: "science", name: "Science" },
-  ];
-
   // Fetch courses and professors from backend or sample data
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const coursesData = await getCourses();
-        setCourses(coursesData);
-        setFilteredCourses(coursesData);
+        const coursesData = await api.courses.list({ limit: 100 });
+        setCourses(coursesData || []);
+        setFilteredCourses(coursesData || []);
 
-        const professorsData = await getProfessors();
-        setProfessors(professorsData);
-        setFilteredProfessors(professorsData);
+        const professorsData = await api.professors.list({ limit: 100 });
+        setProfessors(professorsData || []);
+        setFilteredProfessors(professorsData || []);
       } catch (err) {
         console.error("Failed to load data:", err);
       }
@@ -41,14 +30,11 @@ function Landing({ user, onLogout }) {
   // Filter courses based on search & category
   useEffect(() => {
     let filtered = courses;
-    if (selectedCategory !== "all") {
-      filtered = filtered.filter((course) => course.category === selectedCategory);
-    }
     if (searchQuery) {
       filtered = filtered.filter(
         (c) =>
-          c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          c.instructor.toLowerCase().includes(searchQuery.toLowerCase())
+          (c.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (c.code || "").toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
     setFilteredCourses(filtered);
@@ -57,32 +43,17 @@ function Landing({ user, onLogout }) {
     let profFiltered = professors;
     if (searchQuery) {
       profFiltered = profFiltered.filter((p) =>
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.department.toLowerCase().includes(searchQuery.toLowerCase())
+        (`${p.first_name || ""} ${p.last_name || ""}`)
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        (p.department || "").toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
     setFilteredProfessors(profFiltered);
-  }, [searchQuery, selectedCategory, courses, professors]);
+  }, [searchQuery, courses, professors]);
 
   return (
     <div className="landing-page">
-      {/* Header */}
-      <header className="landing-header">
-        <div className="header-content">
-          <div className="logo-section">
-            <h1 className="logo-title">📚 EduHub</h1>
-          </div>
-          <div className="profile-section">
-            <div className="user-profile">
-              <span className="username">{user?.username || "User"}</span>
-              <button className="logout-btn" onClick={onLogout}>
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
       {/* Main Content */}
       <main className="landing-main">
         {/* Search Bar */}
@@ -96,44 +67,23 @@ function Landing({ user, onLogout }) {
           />
         </div>
 
-        {/* Categories */}
-        <div className="categories-section">
-          <h2>Categories</h2>
-          <div className="categories-grid">
-            {categories.map((category) => (
-              <button
-                key={category.id}
-                className={`category-btn ${selectedCategory === category.id ? "active" : ""}`}
-                onClick={() => setSelectedCategory(category.id)}
-              >
-                {category.name}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Courses */}
         <div className="courses-section">
-          <h2>
-            {selectedCategory === "all"
-              ? "All Courses"
-              : `${categories.find((c) => c.id === selectedCategory)?.name}`}
-          </h2>
+          <h2>All Courses</h2>
           <div className="courses-grid">
             {filteredCourses.length > 0 ? (
               filteredCourses.map((course) => (
                 <div key={course.id} className="course-card">
-                  <div className="course-image">{course.image}</div>
                   <div className="course-content">
-                    <h3>{course.title}</h3>
-                    <p className="instructor">👨‍🏫 {course.instructor}</p>
+                    <h3>{course.code} - {course.title}</h3>
+                    <p className="instructor">🏛 {(course.code || "").split(" ")[0] || course.department}</p>
                     <div className="course-meta">
-                      <span className="students">👥 {course.students} students</span>
-                      <span className="rating">⭐ {course.rating}</span>
+                      <span className="students">📚 Course</span>
+                      <span className="rating">⭐ N/A</span>
                     </div>
-                    <Link to={`/courses/${course.id}`}>
-                      <button className="enroll-btn">View Details</button>
-                    </Link>
+                    <button className="enroll-btn" onClick={() => onViewCourseDetails?.(course.id)}>
+                      View Details
+                    </button>
                   </div>
                 </div>
               ))
@@ -152,11 +102,11 @@ function Landing({ user, onLogout }) {
             {filteredProfessors.length > 0 ? (
               filteredProfessors.map((prof) => (
                 <div key={prof.id} className="professor-card">
-                  <h3>{prof.name}</h3>
-                  <p>🏛 {prof.department}</p>
-                  <Link to={`/professors/${prof.id}`}>
-                    <button className="view-btn">View Reviews</button>
-                  </Link>
+                  <h3>{prof.first_name} {prof.last_name}</h3>
+                  <p>🏛 {prof.department || "Department N/A"}</p>
+                  <button className="view-btn" onClick={() => onViewProfessorReviews?.(prof.id)}>
+                    View Reviews
+                  </button>
                 </div>
               ))
             ) : (
