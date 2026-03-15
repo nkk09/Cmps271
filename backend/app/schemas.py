@@ -64,6 +64,27 @@ class StudentUpdate(BaseModel):
     major: Optional[str] = None
 
 
+class AdminUserOut(BaseModel):
+    id: uuid.UUID
+    status: Literal["active", "suspended", "inactive"]
+    created_at: datetime
+    last_login: Optional[datetime]
+    roles: list[str]
+    student_username: Optional[str] = None
+    student_major: Optional[str] = None
+    professor_name: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class AdminUserRolesUpdate(BaseModel):
+    roles: list[Literal["admin", "professor", "student"]] = Field(min_length=1)
+
+
+class AdminUserStatusUpdate(BaseModel):
+    status: Literal["active", "suspended", "inactive"]
+
+
 # ---------------------------------------------------------------------------
 # Professor
 # ---------------------------------------------------------------------------
@@ -183,6 +204,53 @@ class InteractionResponse(BaseModel):
     interaction_type: Literal["like", "dislike"]
     likes_count: int
     dislikes_count: int
+
+
+# ---------------------------------------------------------------------------
+# Violations
+# ---------------------------------------------------------------------------
+
+class ViolationCreate(BaseModel):
+    violation_type: Literal[
+        "spam",
+        "harassment",
+        "hate_speech",
+        "misinformation",
+        "personal_data",
+        "other",
+    ] = "other"
+    severity: Literal["low", "medium", "high", "critical"] = "medium"
+    reason: Optional[str] = Field(default=None, max_length=2000)
+
+
+class ViolationAdminUpdate(BaseModel):
+    status: Optional[Literal["open", "in_review", "resolved", "dismissed"]] = None
+    severity: Optional[Literal["low", "medium", "high", "critical"]] = None
+    admin_notes: Optional[str] = Field(default=None, max_length=5000)
+
+
+class ViolationOut(BaseModel):
+    id: uuid.UUID
+    review_id: uuid.UUID
+    reported_by_student_id: Optional[uuid.UUID]
+    assigned_admin_id: Optional[uuid.UUID]
+    violation_type: Literal[
+        "spam",
+        "harassment",
+        "hate_speech",
+        "misinformation",
+        "personal_data",
+        "other",
+    ]
+    severity: Literal["low", "medium", "high", "critical"]
+    reason: Optional[str]
+    admin_notes: Optional[str]
+    status: Literal["open", "in_review", "resolved", "dismissed"]
+    created_at: datetime
+    updated_at: datetime
+    resolved_at: Optional[datetime]
+
+    model_config = {"from_attributes": True}
 
 
 # ---------------------------------------------------------------------------

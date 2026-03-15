@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import "../styles/me.css"
 import api from "../api"
 
-function Me({ onLogout }) {
+function Me() {
   const [userData, setUserData] = useState(null)
   const [myReviews, setMyReviews] = useState([])
   const [loading, setLoading] = useState(true)
@@ -26,11 +26,6 @@ function Me({ onLogout }) {
     }
     fetchData()
   }, [])
-
-  const handleLogout = async () => {
-    await api.auth.logout()
-    if (onLogout) onLogout()
-  }
 
   const handleDeleteReview = async (reviewId) => {
     if (!confirm("Delete this review?")) return
@@ -66,9 +61,6 @@ function Me({ onLogout }) {
                 <p><strong>Major:</strong> {major}</p>
                 <p><strong>Member Since:</strong> {memberSince}</p>
               </div>
-              <button className="logout-btn" onClick={handleLogout}>
-                Logout
-              </button>
             </div>
 
             <div className="my-reviews-section">

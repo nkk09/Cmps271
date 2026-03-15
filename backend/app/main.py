@@ -15,6 +15,7 @@ from app.api.courses import (
     semesters_router,
 )
 from app.api.reviews import router as reviews_router
+from app.api.violations import router as violations_router
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -46,6 +47,7 @@ app.include_router(professors_router, prefix="/api/v1")
 app.include_router(sections_router,   prefix="/api/v1")
 app.include_router(semesters_router,  prefix="/api/v1")
 app.include_router(reviews_router,    prefix="/api/v1")
+app.include_router(violations_router, prefix="/api/v1")
 
 
 @app.get("/health")

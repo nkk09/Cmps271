@@ -20,6 +20,7 @@ from app.crud import (
     sections,
     reviews,
     review_interactions,
+    violations,
     roles,
 )
 
@@ -33,5 +34,6 @@ __all__ = [
     "sections",
     "reviews",
     "review_interactions",
+    "violations",
     "roles",
 ]

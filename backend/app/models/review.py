@@ -57,6 +57,9 @@ class Review(Base):
     interactions: Mapped[list["ReviewInteraction"]] = relationship(
         "ReviewInteraction", back_populates="review", cascade="all, delete-orphan"
     )
+    violations: Mapped[list["Violation"]] = relationship(
+        "Violation", back_populates="review", cascade="all, delete-orphan"
+    )
 
     @property
     def net_score(self) -> int:

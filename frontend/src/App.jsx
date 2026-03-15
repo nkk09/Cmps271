@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react"
 import Landing from "./pages/Landing"
 import Reviews from "./pages/Reviews"
+import Admin from "./pages/Admin"
+import Me from "./pages/Me"
 import Login from "./pages/Login"
 import api from "./api"
 
@@ -8,6 +10,12 @@ function App() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState("landing")
+  const [reviewNavigation, setReviewNavigation] = useState({
+    courseId: "",
+    professorId: "",
+    token: 0,
+  })
+  const isAdmin = user?.roles?.includes("admin")
 
   const checkAuth = useCallback(async () => {
     if (!api.auth.isLoggedIn()) {
@@ -67,6 +75,16 @@ function App() {
     setUser(null)
   }
 
+  const handleOpenCourseReviews = (courseId) => {
+    setReviewNavigation({ courseId, professorId: "", token: Date.now() })
+    setCurrentPage("reviews")
+  }
+
+  const handleOpenProfessorReviews = (professorId) => {
+    setReviewNavigation({ courseId: "", professorId, token: Date.now() })
+    setCurrentPage("reviews")
+  }
+
   if (loading) {
     return <div style={{ padding: "20px" }}>Loading...</div>
   }
@@ -99,10 +117,39 @@ function App() {
         <NavButton active={currentPage === "reviews"} onClick={() => setCurrentPage("reviews")}>
           📝 Reviews
         </NavButton>
+        <NavButton active={currentPage === "me"} onClick={() => setCurrentPage("me")}>
+          👤 Profile
+        </NavButton>
+        {isAdmin && (
+          <NavButton active={currentPage === "admin"} onClick={() => setCurrentPage("admin")}>
+            🛡 Moderation
+          </NavButton>
+        )}
+        <div style={{ flex: 1 }} />
+        <span style={{ fontSize: "13px", opacity: 0.9, marginRight: "8px" }}>
+          {user?.student?.username || user?.professor?.first_name || "User"}
+        </span>
+        <NavButton active={false} onClick={handleLogout}>
+          Logout
+        </NavButton>
       </nav>
 
-      {currentPage === "landing" && <Landing user={user} onLogout={handleLogout} />}
-      {currentPage === "reviews" && <Reviews user={user} />}
+      {currentPage === "landing" && (
+        <Landing
+          onViewCourseDetails={handleOpenCourseReviews}
+          onViewProfessorReviews={handleOpenProfessorReviews}
+        />
+      )}
+      {currentPage === "reviews" && (
+        <Reviews
+          user={user}
+          initialCourseId={reviewNavigation.courseId}
+          initialProfessorId={reviewNavigation.professorId}
+          navigationToken={reviewNavigation.token}
+        />
+      )}
+      {currentPage === "me" && <Me />}
+      {currentPage === "admin" && <Admin user={user} />}
     </div>
   )
 }

@@ -9,8 +9,21 @@ import React, { useState } from "react"
  * isMyReview: bool
  * onDelete: () => void
  * onEdit: (newContent) => void
+ * canReport: bool
+ * onReport: () => void
  */
-function ReviewCard({ review, reaction, onReact, disableInteract = false, author, isMyReview, onDelete, onEdit }) {
+function ReviewCard({
+  review,
+  reaction,
+  onReact,
+  disableInteract = false,
+  author,
+  isMyReview,
+  onDelete,
+  onEdit,
+  canReport = false,
+  onReport,
+}) {
   const net = (review.likes ?? 0) - (review.dislikes ?? 0)
   const [editing, setEditing] = useState(false)
   const [editContent, setEditContent] = useState(review.text || "")
@@ -230,6 +243,24 @@ function ReviewCard({ review, reaction, onReact, disableInteract = false, author
               }}
             >
               🗑 Delete
+            </button>
+          )}
+
+          {!isMyReview && canReport && onReport && !editing && (
+            <button
+              type="button"
+              onClick={onReport}
+              style={{
+                background: "transparent",
+                border: "1px solid rgba(217, 119, 6, 0.45)",
+                color: "#b45309",
+                borderRadius: "8px",
+                padding: "0.25rem 0.6rem",
+                fontSize: "0.8rem",
+                cursor: "pointer",
+              }}
+            >
+              🚩 Report
             </button>
           )}
         </div>

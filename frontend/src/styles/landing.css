@@ -13,81 +13,11 @@
   min-height: 100vh;
 }
 
-/* HEADER */
-.landing-header {
-  background: linear-gradient(135deg, #8b1538, #5c0f25);
-  color: white;
-  padding: 20px 40px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.header-content {
-  max-width: 1400px;
-  margin: 0 auto;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.logo-section {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.logo-title {
-  font-size: 28px;
-  font-weight: bold;
-  letter-spacing: 1px;
-}
-
-.profile-section {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.user-profile {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  background: rgba(255, 255, 255, 0.1);
-  padding: 10px 20px;
-  border-radius: 8px;
-  backdrop-filter: blur(10px);
-}
-
-.username {
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.logout-btn {
-  padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 13px;
-  transition: all 0.3s ease;
-}
-
-.logout-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.5);
-  transform: translateY(-2px);
-}
-
 /* MAIN CONTENT */
 .landing-main {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 40px 20px;
+  padding: 28px 20px 40px;
 }
 
 /* SEARCH SECTION */
@@ -111,47 +41,6 @@
   border-color: #8b1538;
   box-shadow: 0 4px 15px rgba(139, 21, 56, 0.2);
   background-color: #fff;
-}
-
-/* CATEGORIES SECTION */
-.categories-section {
-  margin-bottom: 50px;
-}
-
-.categories-section h2 {
-  font-size: 24px;
-  margin-bottom: 20px;
-  color: #333;
-  font-weight: 600;
-}
-
-.categories-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.category-btn {
-  padding: 10px 20px;
-  border: 2px solid #e0e0e0;
-  background: white;
-  border-radius: 25px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  color: #555;
-  transition: all 0.3s ease;
-}
-
-.category-btn:hover {
-  border-color: #8b1538;
-  color: #8b1538;
-}
-
-.category-btn.active {
-  background: linear-gradient(135deg, #8b1538, #5c0f25);
-  color: white;
-  border-color: #8b1538;
 }
 
 /* COURSES SECTION */
@@ -185,16 +74,6 @@
 .course-card:hover {
   transform: translateY(-8px);
   box-shadow: 0 12px 30px rgba(139, 21, 56, 0.15);
-}
-
-.course-image {
-  background: linear-gradient(135deg, #8b1538, #5c0f25);
-  color: white;
-  height: 120px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 48px;
 }
 
 .course-content {

@@ -133,7 +133,7 @@ function CourseSearchSelect({ courses, value, onChange, placeholder = "Select a 
 }
 
 /* ---------- Main Reviews Page ---------- */
-function Reviews({ user }) {
+function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigationToken = 0 }) {
   const [courses, setCourses] = useState([])
   const [professors, setProfessors] = useState([])
   const [reviews, setReviews] = useState([])
@@ -145,6 +145,13 @@ function Reviews({ user }) {
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [showReportForm, setShowReportForm] = useState(false)
+  const [reportingReviewId, setReportingReviewId] = useState("")
+  const [reportData, setReportData] = useState({
+    violation_type: "other",
+    severity: "medium",
+    reason: "",
+  })
 
   // Separate course selection for the create form
   const [formCourse, setFormCourse] = useState("")
@@ -161,6 +168,18 @@ function Reviews({ user }) {
   const studentId = user?.student?.id
 
   const isAdmin = user?.roles?.includes("admin")
+
+  useEffect(() => {
+    if (initialCourseId) {
+      setSelectedCourse(initialCourseId)
+      setSelectedProfessor("")
+      return
+    }
+    if (initialProfessorId) {
+      setSelectedProfessor(initialProfessorId)
+      setSelectedCourse("")
+    }
+  }, [initialCourseId, initialProfessorId, navigationToken])
 
   // Load courses and professors once
   useEffect(() => {
@@ -323,6 +342,34 @@ function Reviews({ user }) {
     }
   }
 
+  const openReportForm = (reviewId) => {
+    setReportData({ violation_type: "other", severity: "medium", reason: "" })
+    setReportingReviewId(reviewId)
+    setShowReportForm(true)
+  }
+
+  const handleSubmitReport = async (e) => {
+    e.preventDefault()
+    if (!reportingReviewId) return
+
+    setLoading(true)
+    setError("")
+    try {
+      await api.violations.report(reportingReviewId, {
+        violation_type: reportData.violation_type,
+        severity: reportData.severity,
+        reason: reportData.reason.trim() || undefined,
+      })
+      setShowReportForm(false)
+      setReportingReviewId("")
+      setReportData({ violation_type: "other", severity: "medium", reason: "" })
+    } catch (err) {
+      setError(err.message || "Failed to report this review")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="reviews-page">
       <div className="reviews-inner">
@@ -339,6 +386,62 @@ function Reviews({ user }) {
         </header>
 
         {error && <div className="error-message">{error}</div>}
+
+        {showReportForm && (
+          <div className="report-overlay">
+            <div className="report-modal">
+              <h2>Report Review</h2>
+              <form onSubmit={handleSubmitReport}>
+                <div className="form-group">
+                  <label>Violation Type</label>
+                  <select
+                    value={reportData.violation_type}
+                    onChange={(e) => setReportData((r) => ({ ...r, violation_type: e.target.value }))}
+                  >
+                    <option value="spam">Spam</option>
+                    <option value="harassment">Harassment</option>
+                    <option value="hate_speech">Hate Speech</option>
+                    <option value="misinformation">Misinformation</option>
+                    <option value="personal_data">Personal Data</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Severity</label>
+                  <select
+                    value={reportData.severity}
+                    onChange={(e) => setReportData((r) => ({ ...r, severity: e.target.value }))}
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Reason (optional)</label>
+                  <textarea
+                    rows={4}
+                    value={reportData.reason}
+                    onChange={(e) => setReportData((r) => ({ ...r, reason: e.target.value }))}
+                    placeholder="Add context for moderators..."
+                  />
+                </div>
+
+                <div className="report-actions">
+                  <button type="button" className="report-cancel" onClick={() => setShowReportForm(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="report-submit" disabled={loading}>
+                    {loading ? "Submitting..." : "Submit Report"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* Create Review Form */}
         {showCreateForm && isStudent && (
@@ -492,6 +595,8 @@ function Reviews({ user }) {
               isMyReview={isMyReview}
               onDelete={() => handleDeleteReview(review.id)}
               onEdit={(newContent) => handleEditReview(review.id, newContent)}
+              canReport={isStudent}
+              onReport={() => openReportForm(review.id)}
             />
           )
         })}
@@ -536,6 +641,8 @@ function Reviews({ user }) {
                 isMyReview={isMyReview}
                 onDelete={isMyReview ? () => handleDeleteReview(review.id) : undefined}
                 onEdit={isMyReview ? (newContent) => handleEditReview(review.id, newContent) : undefined}
+                canReport={isStudent}
+                onReport={() => openReportForm(review.id)}
               />
             )
           })}

@@ -7,7 +7,7 @@ Runtime operations are primarily assigning/revoking roles from users.
 import uuid
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -171,3 +171,13 @@ async def user_has_permission(
     """Quick check: does this user have a specific permission?"""
     permissions = await get_user_permissions(db, user_id)
     return permission in permissions
+
+
+async def count_users_with_role(db: AsyncSession, role_name: str) -> int:
+    """Return number of users assigned to the given role."""
+    result = await db.execute(
+        select(func.count(UserRole.id))
+        .join(Role, Role.id == UserRole.role_id)
+        .where(Role.role == role_name)
+    )
+    return int(result.scalar_one() or 0)

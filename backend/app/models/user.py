@@ -42,6 +42,11 @@ class User(Base):
     professor: Mapped[Optional["Professor"]] = relationship("Professor", back_populates="user", uselist=False)
     student: Mapped[Optional["Student"]] = relationship("Student", back_populates="user", uselist=False)
     roles: Mapped[list["UserRole"]] = relationship("UserRole", back_populates="user")
+    assigned_violations: Mapped[list["Violation"]] = relationship(
+        "Violation",
+        foreign_keys="Violation.assigned_admin_id",
+        back_populates="assigned_admin",
+    )
 
     # ------------------------------------------------------------------
     # Email property — transparently encrypts/decrypts
