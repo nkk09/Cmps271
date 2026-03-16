@@ -1,0 +1,983 @@
+{
+  "info": {
+    "name": "AUB Reviews API",
+    "description": "Full test suite for AUB Reviews API. Run with: newman run collection.json --env-var baseUrl=http://localhost:8000/api/v1",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000/api/v1" },
+    { "key": "token", "value": "" },
+    { "key": "testEmail", "value": "testuser@aub.edu.lb" },
+    { "key": "otpCode", "value": "" },
+    { "key": "courseId", "value": "" },
+    { "key": "professorId", "value": "" },
+    { "key": "sectionId", "value": "" },
+    { "key": "semesterId", "value": "" },
+    { "key": "reviewId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has status field', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('status');",
+                  "  pm.expect(json.status).to.eql('ok');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/../health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Request OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has message field', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/request-otp",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"email\": \"{{testEmail}}\" }"
+            }
+          }
+        },
+        {
+          "name": "Request OTP - Invalid Email",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 422 for invalid email', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/request-otp",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"email\": \"not-an-email\" }"
+            }
+          }
+        },
+        {
+          "name": "Verify OTP - Wrong Code",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400 for wrong code', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/verify-otp",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"email\": \"{{testEmail}}\", \"code\": \"000000\" }"
+            }
+          }
+        },
+        {
+          "name": "Verify OTP - Valid (Manual Step)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns access token', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('access_token');",
+                  "  pm.expect(json.token_type).to.eql('bearer');",
+                  "  pm.collectionVariables.set('token', json.access_token);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/verify-otp",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"email\": \"{{testEmail}}\", \"code\": \"{{otpCode}}\" }"
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has message', () => {",
+                  "  pm.expect(pm.response.json()).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get Me",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response has user object', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('user');",
+                  "  pm.expect(json.user).to.have.property('id');",
+                  "  pm.expect(json.user).to.have.property('status');",
+                  "  pm.expect(json).to.have.property('roles');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/users/me"
+          }
+        },
+        {
+          "name": "Get Me - Unauthenticated",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401 without token', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/users/me"
+          }
+        },
+        {
+          "name": "Update My Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Major updated', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.major).to.eql('Computer Science');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/users/me",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"major\": \"Computer Science\" }"
+            }
+          }
+        },
+        {
+          "name": "Get My Reviews",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns array', () => {",
+                  "  pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/users/me/reviews"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Courses",
+      "item": [
+        {
+          "name": "List Courses",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns array', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.be.an('array');",
+                  "  pm.expect(json.length).to.be.greaterThan(0);",
+                  "  if (json.length > 0) {",
+                  "    pm.collectionVariables.set('courseId', json[0].id);",
+                  "  }",
+                  "});",
+                  "pm.test('Course has required fields', () => {",
+                  "  const course = pm.response.json()[0];",
+                  "  pm.expect(course).to.have.all.keys('id','code','title','department');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/courses?limit=10",
+              "query": [{ "key": "limit", "value": "10" }]
+            }
+          }
+        },
+        {
+          "name": "List Courses - Filter by Department",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('All courses match department', () => {",
+                  "  pm.response.json().forEach(c => {",
+                  "    pm.expect(c.department).to.eql('CMPS');",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/courses?department=CMPS",
+              "query": [{ "key": "department", "value": "CMPS" }]
+            }
+          }
+        },
+        {
+          "name": "Search Courses",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/courses?search=programming",
+              "query": [{ "key": "search", "value": "programming" }]
+            }
+          }
+        },
+        {
+          "name": "Get Departments",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns non-empty array of strings', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.be.an('array');",
+                  "  pm.expect(json.length).to.be.greaterThan(0);",
+                  "  pm.expect(json[0]).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/courses/departments"
+          }
+        },
+        {
+          "name": "Get Course by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has required fields', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('id');",
+                  "  pm.expect(json).to.have.property('code');",
+                  "  pm.expect(json).to.have.property('title');",
+                  "  pm.expect(json).to.have.property('average_rating');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/courses/{{courseId}}"
+          }
+        },
+        {
+          "name": "Get Course - Not Found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/courses/00000000-0000-0000-0000-000000000000"
+          }
+        },
+        {
+          "name": "Get Course Sections",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns array', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.be.an('array');",
+                  "  if (json.length > 0) {",
+                  "    pm.collectionVariables.set('sectionId', json[0].id);",
+                  "    pm.collectionVariables.set('professorId', json[0].professor.id);",
+                  "    pm.collectionVariables.set('semesterId', json[0].semester.id);",
+                  "  }",
+                  "});",
+                  "pm.test('Section has nested objects', () => {",
+                  "  const sections = pm.response.json();",
+                  "  if (sections.length > 0) {",
+                  "    pm.expect(sections[0]).to.have.property('professor');",
+                  "    pm.expect(sections[0]).to.have.property('semester');",
+                  "    pm.expect(sections[0]).to.have.property('course');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/courses/{{courseId}}/sections"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Professors",
+      "item": [
+        {
+          "name": "List Professors",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns array with required fields', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.be.an('array');",
+                  "  pm.expect(json.length).to.be.greaterThan(0);",
+                  "  pm.expect(json[0]).to.have.all.keys('id','first_name','last_name','department');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/professors?limit=10",
+              "query": [{ "key": "limit", "value": "10" }]
+            }
+          }
+        },
+        {
+          "name": "Search Professors",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/professors?search=Ali",
+              "query": [{ "key": "search", "value": "Ali" }]
+            }
+          }
+        },
+        {
+          "name": "Get Professor by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has average_rating field', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('average_rating');",
+                  "  pm.expect(json).to.have.property('first_name');",
+                  "  pm.expect(json).to.have.property('last_name');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/professors/{{professorId}}"
+          }
+        },
+        {
+          "name": "Get Professor Sections",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/professors/{{professorId}}/sections"
+          }
+        },
+        {
+          "name": "Get Professor Reviews",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/professors/{{professorId}}/reviews"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sections",
+      "item": [
+        {
+          "name": "Get Section by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has all nested relations', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('course');",
+                  "  pm.expect(json).to.have.property('professor');",
+                  "  pm.expect(json).to.have.property('semester');",
+                  "  pm.expect(json).to.have.property('section_number');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/sections/{{sectionId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Semesters",
+      "item": [
+        {
+          "name": "List Semesters",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns array with name/dates', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.be.an('array');",
+                  "  if (json.length > 0) {",
+                  "    pm.expect(json[0]).to.have.property('name');",
+                  "    pm.expect(json[0]).to.have.property('starts_on');",
+                  "    pm.expect(json[0]).to.have.property('ends_on');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/semesters"
+          }
+        },
+        {
+          "name": "Get Current Semester",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/semesters/current"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reviews",
+      "item": [
+        {
+          "name": "Get Section Reviews (Public)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/sections/{{sectionId}}/reviews"
+          }
+        },
+        {
+          "name": "Get Section Reviews - Sort by Top Rated",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/sections/{{sectionId}}/reviews?sort_by=top_rated",
+              "query": [{ "key": "sort_by", "value": "top_rated" }]
+            }
+          }
+        },
+        {
+          "name": "Get Section Reviews - Sort by Most Liked",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/sections/{{sectionId}}/reviews?sort_by=most_liked",
+              "query": [{ "key": "sort_by", "value": "most_liked" }]
+            }
+          }
+        },
+        {
+          "name": "Submit Review",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Review created with pending status', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('id');",
+                  "  pm.expect(json.status).to.eql('pending');",
+                  "  pm.expect(json.rating).to.eql(4.5);",
+                  "  pm.collectionVariables.set('reviewId', json.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/sections/{{sectionId}}/reviews",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"content\": \"This is a great course with very clear explanations and engaging lectures.\", \"rating\": 4.5 }"
+            }
+          }
+        },
+        {
+          "name": "Submit Review - Duplicate (Should Fail)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 409 on duplicate review', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/sections/{{sectionId}}/reviews",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"content\": \"Trying to submit a duplicate review for the same section.\", \"rating\": 3.0 }"
+            }
+          }
+        },
+        {
+          "name": "Submit Review - Content Too Short",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 422 for short content', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/sections/{{sectionId}}/reviews",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"content\": \"Too short\", \"rating\": 3.0 }"
+            }
+          }
+        },
+        {
+          "name": "Submit Review - Rating Out of Range",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 422 for invalid rating', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/sections/{{sectionId}}/reviews",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"content\": \"This content is long enough to pass validation checks.\", \"rating\": 6.0 }"
+            }
+          }
+        },
+        {
+          "name": "Submit Review - Unauthenticated",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401 without auth', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/sections/{{sectionId}}/reviews",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"content\": \"This content is long enough to pass validation checks.\", \"rating\": 3.0 }"
+            }
+          }
+        },
+        {
+          "name": "Update Review",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Review reset to pending after edit', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.status).to.eql('pending');",
+                  "  pm.expect(json.rating).to.eql(3.5);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/reviews/{{reviewId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"content\": \"Updated review content that is long enough to pass validation.\", \"rating\": 3.5 }"
+            }
+          }
+        },
+        {
+          "name": "Like Review",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns interaction response', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('review_id');",
+                  "  pm.expect(json).to.have.property('likes_count');",
+                  "  pm.expect(json).to.have.property('dislikes_count');",
+                  "  pm.expect(json.interaction_type).to.eql('like');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/reviews/{{reviewId}}/like"
+          }
+        },
+        {
+          "name": "Dislike Review (Switch from Like)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Interaction switched to dislike', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.interaction_type).to.eql('dislike');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/reviews/{{reviewId}}/dislike"
+          }
+        },
+        {
+          "name": "Remove Interaction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/reviews/{{reviewId}}/interaction"
+          }
+        },
+        {
+          "name": "Delete Review",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/reviews/{{reviewId}}"
+          }
+        },
+        {
+          "name": "Delete Review - Already Deleted",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404 after deletion', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/reviews/{{reviewId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Delete Account (Cleanup)",
+      "item": [
+        {
+          "name": "Delete My Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 204', () => pm.response.to.have.status(204));",
+                  "pm.collectionVariables.set('token', '');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/users/me"
+          }
+        }
+      ]
+    }
+  ]
+}
