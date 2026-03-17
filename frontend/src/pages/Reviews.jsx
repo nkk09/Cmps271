@@ -167,8 +167,6 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
   const isStudent = user?.roles?.includes("student")
   const studentId = user?.student?.id
 
-  const isAdmin = user?.roles?.includes("admin")
-
   useEffect(() => {
     if (initialCourseId) {
       setSelectedCourse(initialCourseId)
@@ -262,21 +260,25 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
     loadReviews()
   }, [selectedCourse, selectedProfessor, sortBy, sections])
 
-  const reloadReviews = async () => {
-    if (!selectedCourse && !selectedProfessor) return
+  const reloadReviews = async (overrideCourse, overrideProfessor) => {
+    const course = overrideCourse !== undefined ? overrideCourse : selectedCourse
+    const professor = overrideProfessor !== undefined ? overrideProfessor : selectedProfessor
+    if (!course && !professor) return
     try {
       let data = []
-      if (selectedCourse) {
-        const courseSections = sections.length ? sections : await api.courses.getSections(selectedCourse)
-        const filtered = selectedProfessor
-          ? courseSections.filter((s) => s.professor?.id === selectedProfessor)
+      if (course) {
+        const courseSections = (course === selectedCourse && sections.length)
+          ? sections
+          : await api.courses.getSections(course)
+        const filtered = professor
+          ? courseSections.filter((s) => s.professor?.id === professor)
           : courseSections
         const allReviews = await Promise.all(
           filtered.map((s) => api.sections.getReviews(s.id, { sort_by: sortBy }).catch(() => []))
         )
         data = allReviews.flat()
-      } else if (selectedProfessor) {
-        data = await api.professors.getReviews(selectedProfessor, { sort_by: sortBy })
+      } else if (professor) {
+        data = await api.professors.getReviews(professor, { sort_by: sortBy })
       }
       setReviews(data || [])
     } catch (err) {
@@ -296,11 +298,14 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
         content: formData.content,
         rating: parseFloat(formData.rating),
       })
+      const postedCourse = formCourse
       setFormData({ section_id: "", content: "", rating: 5 })
       setFormCourse("")
       setFormSections([])
       setShowCreateForm(false)
-      await reloadReviews()
+      setSelectedCourse(postedCourse)
+      setSelectedProfessor("")
+      await reloadReviews(postedCourse, "")
     } catch (err) {
       setError(err.message || "Failed to post review")
     } finally {
@@ -559,53 +564,8 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
           </div>
         )}
 
-        {/* Admin Recent Reviews */}
-{isAdmin && reviews.length > 0 && (
-  <>
-    <h2 style={{ marginTop: "1rem" }}>Recent Reviews (Admin)</h2>
-    <div className="reviews-list">
-      {reviews
-        .slice()
-        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        .slice(0, 5)
-        .map((review) => {
-          const myInteraction = review.my_interaction ?? null
-          const isMyReview = !!(studentId && review.student?.id === studentId)
-          const courseCode = review.section?.course?.code || "Course"
-          const profName = review.section?.professor
-            ? `${review.section.professor.first_name} ${review.section.professor.last_name}`
-            : "Professor"
-
-          return (
-            <ReviewCard
-              key={review.id}
-              review={{
-                id: review.id,
-                course: courseCode,
-                professor: profName,
-                text: review.content,
-                likes: review.likes_count,
-                dislikes: review.dislikes_count,
-                createdAt: new Date(review.created_at).toLocaleDateString(),
-              }}
-              reaction={myInteraction}
-              onReact={(next) => handleInteract(review.id, next, myInteraction)}
-              disableInteract={isMyReview}
-              author={review.student?.username || "anonymous"}
-              isMyReview={isMyReview}
-              onDelete={() => handleDeleteReview(review.id)}
-              onEdit={(newContent) => handleEditReview(review.id, newContent)}
-              canReport={isStudent}
-              onReport={() => openReportForm(review.id)}
-            />
-          )
-        })}
-    </div>
-  </>
-)}
-
-{/* Normal Reviews List */}
-<div className="reviews-list">
+        {/* Normal Reviews List */}
+        <div className="reviews-list">
           {loading && <div className="loading">Loading reviews...</div>}
 
           {!loading && (selectedCourse || selectedProfessor) && reviews.length === 0 && (

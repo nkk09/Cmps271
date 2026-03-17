@@ -85,6 +85,13 @@ function Admin({ user }) {
     return { total: violations.length, open: openCount, inReview: inReviewCount, resolved: resolvedCount }
   }, [violations])
 
+  const recentViolationCases = useMemo(() => {
+    return violations
+      .slice()
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .slice(0, 5)
+  }, [violations])
+
   const patchLocal = (id, patch) => {
     setViolations((prev) => prev.map((v) => (v.id === id ? { ...v, ...patch } : v)))
   }
@@ -230,6 +237,29 @@ function Admin({ user }) {
 
         {!loading && violations.length === 0 && (
           <p className="admin-empty">No moderation cases found for the selected filters.</p>
+        )}
+
+        {recentViolationCases.length > 0 && (
+          <section className="admin-list">
+            <header className="admin-subheader">
+              <div>
+                <h2>Recent Reported Reviews</h2>
+                <p>Newest review reports that need moderation attention.</p>
+              </div>
+            </header>
+            {recentViolationCases.map((v) => (
+              <article key={`recent-${v.id}`} className="admin-card">
+                <div className="admin-card-row">
+                  <span className="chip">Review ID: {v.review_id}</span>
+                  <span className="chip">Type: {v.violation_type}</span>
+                  <span className={`chip chip-severity chip-${v.severity}`}>Severity: {v.severity}</span>
+                </div>
+                <p><strong>Status:</strong> {v.status}</p>
+                <p><strong>Reported:</strong> {new Date(v.created_at).toLocaleString()}</p>
+                <p><strong>Reason:</strong> {v.reason || "No reason provided"}</p>
+              </article>
+            ))}
+          </section>
         )}
 
         <section className="admin-list">
