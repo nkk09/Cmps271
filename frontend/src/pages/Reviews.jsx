@@ -558,7 +558,7 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
           </div>
         </div>
 
-        {!selectedCourse && !selectedProfessor && (
+        {!loading && !selectedCourse && !selectedProfessor && (
           <div className="no-reviews">
             <p>Select a course or professor above to see reviews.</p>
           </div>

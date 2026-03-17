@@ -189,7 +189,7 @@ async def create(
         section_id=section_id,
         content=content,
         rating=rating,
-        status="approved",
+        status="pending",
     )
     db.add(review)
     await db.flush()
@@ -213,10 +213,10 @@ async def update_content(
     content: str,
     rating: float,
 ) -> Review:
-    """Student editing their own review — stays approved (no moderation yet)."""
+    """Student editing their own review — goes back to pending for re-approval."""
     review.content = content
     review.rating = rating
-    review.status = "approved"
+    review.status = "pending"
     review.updated_at = datetime.utcnow()
     await db.flush()
     return review

@@ -218,6 +218,18 @@ const semesters = {
 // ---------------------------------------------------------------------------
 
 const reviews = {
+  async listPending(params = {}) {
+    const q = new URLSearchParams(params).toString()
+    return request(`/reviews/pending${q ? "?" + q : ""}`)
+  },
+
+  async updateStatus(reviewId, status) {
+    return request(`/reviews/${reviewId}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    })
+  },
+
   async update(reviewId, data) {
     return request(`/reviews/${reviewId}`, {
       method: "PATCH",

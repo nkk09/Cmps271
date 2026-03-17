@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import api from "../api"
 import "../styles/admin.css"
 
@@ -21,8 +21,18 @@ function Admin({ user }) {
   const [userRoleFilter, setUserRoleFilter] = useState("")
   const [userStatusFilter, setUserStatusFilter] = useState("")
   const [userSearch, setUserSearch] = useState("")
+  const [pendingReviews, setPendingReviews] = useState([])
+  const [pendingLoading, setPendingLoading] = useState(false)
+  const [moderatingId, setModeratingId] = useState("")
 
   const isAdmin = user?.roles?.includes("admin")
+
+  const violationsRef = useRef(null)
+  const recentReviewsRef = useRef(null)
+  const pendingReviewsRef = useRef(null)
+  const usersRef = useRef(null)
+
+  const scrollTo = (ref) => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" })
 
   const loadViolations = async () => {
     if (!isAdmin) return
@@ -42,8 +52,22 @@ function Admin({ user }) {
     }
   }
 
+  const loadPendingReviews = async () => {
+    if (!isAdmin) return
+    setPendingLoading(true)
+    try {
+      const data = await api.reviews.listPending()
+      setPendingReviews(data || [])
+    } catch {
+      setPendingReviews([])
+    } finally {
+      setPendingLoading(false)
+    }
+  }
+
   useEffect(() => {
     loadViolations()
+    loadPendingReviews()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, severityFilter, isAdmin])
 
@@ -168,6 +192,18 @@ function Admin({ user }) {
     }
   }
 
+  const moderateReview = async (reviewId, newStatus) => {
+    setModeratingId(`${newStatus}:${reviewId}`)
+    try {
+      await api.reviews.updateStatus(reviewId, newStatus)
+      setPendingReviews((prev) => prev.filter((r) => r.id !== reviewId))
+    } catch (err) {
+      setError(err.message || "Failed to moderate review")
+    } finally {
+      setModeratingId("")
+    }
+  }
+
   if (!isAdmin) {
     return (
       <div className="admin-page">
@@ -192,15 +228,10 @@ function Admin({ user }) {
           </button>
         </header>
         <section className="admin-actions">
-          <button className="admin-refresh-btn" type="button">
-            View Users
-            </button>
-            <button className="admin-save-btn" type="button">
-            View Violations
-            </button>
-            <button className="admin-save-btn" type="button">
-            View Reviews
-        </button>
+          <button className="admin-save-btn" type="button" onClick={() => scrollTo(pendingReviewsRef)}>Pending Reviews</button>
+          <button className="admin-save-btn" type="button" onClick={() => scrollTo(usersRef)}>View Users</button>
+          <button className="admin-save-btn" type="button" onClick={() => scrollTo(violationsRef)}>View Violations</button>
+          <button className="admin-save-btn" type="button" onClick={() => scrollTo(recentReviewsRef)}>View Reports</button>
         </section>
 
 
@@ -247,12 +278,56 @@ function Admin({ user }) {
 
         {error && <div className="admin-error">{error}</div>}
 
+        {/* Pending Reviews Moderation */}
+        <section className="admin-list" ref={pendingReviewsRef}>
+          <header className="admin-subheader">
+            <div>
+              <h2>Pending Reviews ({pendingReviews.length})</h2>
+              <p>Reviews awaiting approval before they are visible to other users.</p>
+            </div>
+            <button onClick={loadPendingReviews} className="admin-refresh-btn" disabled={pendingLoading}>
+              {pendingLoading ? "Refreshing..." : "Refresh"}
+            </button>
+          </header>
+          {!pendingLoading && pendingReviews.length === 0 && (
+            <p className="admin-empty">No reviews pending approval.</p>
+          )}
+          {pendingReviews.map((r) => (
+            <article key={r.id} className="admin-card">
+              <div className="admin-card-row">
+                <span className="chip">By: {r.student?.username || "unknown"}</span>
+                <span className={`chip chip-severity chip-medium`}>Rating: {r.rating}/5</span>
+                <span className="chip">Submitted: {new Date(r.created_at).toLocaleString()}</span>
+              </div>
+              <p><strong>Review ID:</strong> {r.id}</p>
+              <p style={{ marginTop: "8px" }}>{r.content}</p>
+              <div className="admin-card-controls" style={{ marginTop: "14px" }}>
+                <button
+                  className="admin-save-btn"
+                  onClick={() => moderateReview(r.id, "approved")}
+                  disabled={!!moderatingId}
+                >
+                  {moderatingId === `approved:${r.id}` ? "Approving..." : "Approve"}
+                </button>
+                <button
+                  className="admin-refresh-btn"
+                  onClick={() => moderateReview(r.id, "rejected")}
+                  disabled={!!moderatingId}
+                  style={{ marginLeft: "10px" }}
+                >
+                  {moderatingId === `rejected:${r.id}` ? "Rejecting..." : "Reject"}
+                </button>
+              </div>
+            </article>
+          ))}
+        </section>
+
         {!loading && violations.length === 0 && (
           <p className="admin-empty">No moderation cases found for the selected filters.</p>
         )}
 
         {recentViolationCases.length > 0 && (
-          <section className="admin-list">
+          <section className="admin-list" ref={recentReviewsRef}>
             <header className="admin-subheader">
               <div>
                 <h2>Recent Reported Reviews</h2>
@@ -274,7 +349,7 @@ function Admin({ user }) {
           </section>
         )}
 
-        <section className="admin-list">
+        <section className="admin-list" ref={violationsRef}>
           {violations.map((v) => (
             <article key={v.id} className="admin-card">
               <div className="admin-card-row">
@@ -331,7 +406,7 @@ function Admin({ user }) {
           ))}
         </section>
 
-        <section className="admin-users">
+        <section className="admin-users" ref={usersRef}>
           <header className="admin-subheader">
             <div>
               <h2>User Management</h2>

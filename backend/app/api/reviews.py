@@ -8,8 +8,8 @@ from typing import Literal
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Query, status, Depends
 
-from app.dependencies import DBDep, CurrentUserOptional, CurrentStudent
-from app.schemas import ReviewCreate, ReviewUpdate, ReviewOut, InteractionResponse
+from app.dependencies import DBDep, CurrentUserOptional, CurrentStudent, AdminUser
+from app.schemas import ReviewCreate, ReviewUpdate, ReviewOut, ReviewStatusUpdate, InteractionResponse
 from app import crud
 
 router = APIRouter(tags=["reviews"])
@@ -113,6 +113,39 @@ async def get_professor_reviews(
         db, professor_id, sort_by=sort_by, skip=skip, limit=limit
     )
     return await _annotate_interactions(db, reviews, user)
+
+
+# ---------------------------------------------------------------------------
+# Admin review moderation
+# ---------------------------------------------------------------------------
+
+@router.get("/reviews/pending", response_model=list[ReviewOut])
+async def list_pending_reviews(
+    db: DBDep,
+    _: AdminUser,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=50, ge=1, le=100),
+):
+    """Admin-only: list all reviews awaiting approval."""
+    reviews = await crud.reviews.get_pending(db, skip=skip, limit=limit)
+    return [ReviewOut.model_validate(r) for r in reviews]
+
+
+@router.patch("/reviews/{review_id}/status", response_model=ReviewOut)
+async def update_review_status(
+    review_id: uuid.UUID,
+    body: ReviewStatusUpdate,
+    db: DBDep,
+    _: AdminUser,
+):
+    """Admin-only: approve or reject a pending review."""
+    review = await crud.reviews.get_by_id(db, review_id)
+    if not review:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
+    review = await crud.reviews.update_status(db, review, body.status)
+    await db.commit()
+    await db.refresh(review)
+    return ReviewOut.model_validate(review)
 
 
 # ---------------------------------------------------------------------------

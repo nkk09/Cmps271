@@ -141,6 +141,37 @@
   font-size: 16px;
 }
 
+.pagination {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+
+.page-btn {
+  min-width: 36px;
+  height: 36px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  color: #374151;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.page-btn:hover {
+  border-color: #8b1538;
+  color: #8b1538;
+}
+
+.page-btn.active {
+  border-color: #8b1538;
+  background: #8b1538;
+  color: #fff;
+}
+
 /* PROFESSORS SECTION */
 .professors-section {
   margin-bottom: 50px;
