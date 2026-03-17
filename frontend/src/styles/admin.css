@@ -259,3 +259,9 @@
     grid-template-columns: 1fr;
   }
 }
+.admin-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}

@@ -191,6 +191,18 @@ function Admin({ user }) {
             {loading ? "Refreshing..." : "Refresh"}
           </button>
         </header>
+        <section className="admin-actions">
+          <button className="admin-refresh-btn" type="button">
+            View Users
+            </button>
+            <button className="admin-save-btn" type="button">
+            View Violations
+            </button>
+            <button className="admin-save-btn" type="button">
+            View Reviews
+        </button>
+        </section>
+
 
         <section className="admin-stats">
           <article>
