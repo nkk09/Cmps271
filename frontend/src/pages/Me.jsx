@@ -136,7 +136,6 @@ function Me({ onLogout }) {
               <h2>Previous Violations</h2>
               <div className="violations-card">
                 <p className="no-violations">No violations recorded</p>
-                <small style={{ color: "#999" }}>Violations data will be updated from backend</small>
               </div>
             </div>
 
