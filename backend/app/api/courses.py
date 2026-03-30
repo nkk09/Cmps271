@@ -114,7 +114,16 @@ async def get_professor_sections(
         db, professor_id, semester_id=semester_id, skip=skip, limit=limit
     )
 
+@professors_router.get("/{professor_id}/courses", response_model=list[CourseOut])
+async def get_professor_courses(
+    professor_id: uuid.UUID,
+    db: DBDep,
+):
+    professor = await crud.professors.get_by_id(db, professor_id)
+    if not professor:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Professor not found")
 
+    return await crud.professors.get_courses_by_professor(db, professor_id)
 # ---------------------------------------------------------------------------
 # Sections
 # ---------------------------------------------------------------------------

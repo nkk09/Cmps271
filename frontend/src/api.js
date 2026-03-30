@@ -171,6 +171,10 @@ const professors = {
     return request(`/professors/${professorId}/sections${q ? "?" + q : ""}`)
   },
 
+  async getCourses(professorId) {
+  return request(`/professors/${professorId}/courses`)
+},
+
   async getReviews(professorId, params = {}) {
     const q = new URLSearchParams(params).toString()
     return request(`/professors/${professorId}/reviews${q ? "?" + q : ""}`)

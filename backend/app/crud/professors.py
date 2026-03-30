@@ -9,7 +9,8 @@ from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.professor import Professor
-
+from app.models.section import Section
+from app.models.course import Course
 
 async def get_by_id(db: AsyncSession, professor_id: uuid.UUID) -> Optional[Professor]:
     result = await db.execute(select(Professor).where(Professor.id == professor_id))
@@ -107,3 +108,15 @@ async def update(
 async def delete(db: AsyncSession, professor: Professor) -> None:
     await db.delete(professor)
     await db.flush()
+async def get_courses_by_professor(
+    db: AsyncSession,
+    professor_id: uuid.UUID,
+) -> list[Course]:
+    result = await db.execute(
+        select(Course)
+        .join(Section, Section.course_id == Course.id)
+        .where(Section.professor_id == professor_id)
+        .distinct()
+        .order_by(Course.code)
+    )
+    return list(result.scalars().all())
