@@ -4,12 +4,18 @@ import api from "../api"
 import ReviewCard from "../components/ReviewCard"
 
 /* ---------- Searchable Course Dropdown ---------- */
-function CourseSearchSelect({ courses, value, onChange, placeholder = "Select a Course" }) {
+function CourseSearchSelect({
+  courses,
+  value,
+  onChange,
+  placeholder = "Select a Course",
+  disabled = false,
+}) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
   const ref = useRef(null)
 
-  const selected = courses.find((c) => c.id === value)
+  const selected = courses.find((c) => String(c.id) === String(value))
 
   const filtered = query.trim()
     ? courses.filter(
@@ -19,29 +25,37 @@ function CourseSearchSelect({ courses, value, onChange, placeholder = "Select a 
       )
     : courses
 
-  // Close on outside click
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
+    }
     document.addEventListener("mousedown", handler)
     return () => document.removeEventListener("mousedown", handler)
   }, [])
 
+  useEffect(() => {
+    if (disabled) setOpen(false)
+  }, [disabled])
+
   const handleSelect = (id) => {
+    if (disabled) return
     onChange(id)
     setQuery("")
     setOpen(false)
   }
 
   return (
-    <div ref={ref} style={{ position: "relative" }}>
+    <div ref={ref} style={{ position: "relative", opacity: disabled ? 0.65 : 1 }}>
       <div
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          if (!disabled) setOpen((o) => !o)
+        }}
         style={{
           padding: "0.55rem 0.85rem",
           border: "1px solid #d1d5db",
           borderRadius: "8px",
           background: "white",
-          cursor: "pointer",
+          cursor: disabled ? "not-allowed" : "pointer",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -55,7 +69,7 @@ function CourseSearchSelect({ courses, value, onChange, placeholder = "Select a 
         <span style={{ color: "#888", marginLeft: "0.5rem" }}>{open ? "▴" : "▾"}</span>
       </div>
 
-      {open && (
+      {open && !disabled && (
         <div
           style={{
             position: "absolute",
@@ -88,6 +102,7 @@ function CourseSearchSelect({ courses, value, onChange, placeholder = "Select a 
               }}
             />
           </div>
+
           <div style={{ maxHeight: "240px", overflowY: "auto" }}>
             {value && (
               <div
@@ -99,15 +114,19 @@ function CourseSearchSelect({ courses, value, onChange, placeholder = "Select a 
                   color: "#888",
                   borderBottom: "1px solid #f0f0f0",
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = "#f9fafb"}
-                onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#f9fafb")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               >
                 — Clear selection
               </div>
             )}
+
             {filtered.length === 0 && (
-              <div style={{ padding: "0.75rem 1rem", color: "#999", fontSize: "0.875rem" }}>No courses found</div>
+              <div style={{ padding: "0.75rem 1rem", color: "#999", fontSize: "0.875rem" }}>
+                No courses found
+              </div>
             )}
+
             {filtered.map((course) => (
               <div
                 key={course.id}
@@ -116,11 +135,19 @@ function CourseSearchSelect({ courses, value, onChange, placeholder = "Select a 
                   padding: "0.55rem 1rem",
                   cursor: "pointer",
                   fontSize: "0.875rem",
-                  background: course.id === value ? "#eff6ff" : "transparent",
-                  color: course.id === value ? "#2563eb" : "#111",
+                  background: String(course.id) === String(value) ? "#eff6ff" : "transparent",
+                  color: String(course.id) === String(value) ? "#2563eb" : "#111",
                 }}
-                onMouseEnter={(e) => { if (course.id !== value) e.currentTarget.style.background = "#f9fafb" }}
-                onMouseLeave={(e) => { if (course.id !== value) e.currentTarget.style.background = "transparent" }}
+                onMouseEnter={(e) => {
+                  if (String(course.id) !== String(value)) {
+                    e.currentTarget.style.background = "#f9fafb"
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (String(course.id) !== String(value)) {
+                    e.currentTarget.style.background = "transparent"
+                  }
+                }}
               >
                 <strong>{course.code}</strong> — {course.title}
               </div>
@@ -153,7 +180,6 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
     reason: "",
   })
 
-  // Separate course selection for the create form
   const [formCourse, setFormCourse] = useState("")
   const [formSections, setFormSections] = useState([])
   const [loadingFormSections, setLoadingFormSections] = useState(false)
@@ -165,7 +191,13 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
   })
 
   const isStudent = user?.roles?.includes("student")
+  const isProfessor = user?.roles?.includes("professor")
   const studentId = user?.student?.id
+  const myProfessorId = user?.professor?.id || ""
+
+  const isProfessorOwnView = Boolean(
+    isProfessor && selectedProfessor && String(selectedProfessor) === String(myProfessorId)
+  )
 
   useEffect(() => {
     if (initialCourseId) {
@@ -173,13 +205,23 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
       setSelectedProfessor("")
       return
     }
+
     if (initialProfessorId) {
       setSelectedProfessor(initialProfessorId)
       setSelectedCourse("")
+      return
     }
-  }, [initialCourseId, initialProfessorId, navigationToken])
 
-  // Load courses and professors once
+    if (isProfessor && myProfessorId) {
+      setSelectedProfessor(myProfessorId)
+      setSelectedCourse("")
+      return
+    }
+
+    setSelectedCourse("")
+    setSelectedProfessor("")
+  }, [initialCourseId, initialProfessorId, navigationToken, isProfessor, myProfessorId])
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true)
@@ -199,9 +241,12 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
     fetchData()
   }, [])
 
-  // Load sections for the filter panel when course is selected
   useEffect(() => {
-    if (!selectedCourse) { setSections([]); return }
+    if (!selectedCourse) {
+      setSections([])
+      return
+    }
+
     setLoadingSections(true)
     api.courses.getSections(selectedCourse)
       .then((data) => setSections(data || []))
@@ -209,9 +254,12 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
       .finally(() => setLoadingSections(false))
   }, [selectedCourse])
 
-  // Load sections for the CREATE form when formCourse changes
   useEffect(() => {
-    if (!formCourse) { setFormSections([]); return }
+    if (!formCourse) {
+      setFormSections([])
+      return
+    }
+
     setLoadingFormSections(true)
     api.courses.getSections(formCourse)
       .then((data) => setFormSections(data || []))
@@ -219,7 +267,6 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
       .finally(() => setLoadingFormSections(false))
   }, [formCourse])
 
-  // Derive professors available for the selected course from sections
   const availableProfessors = selectedCourse
     ? Array.from(
         new Map(
@@ -230,18 +277,30 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
       )
     : professors
 
-  // Load reviews whenever filters change
   useEffect(() => {
-    if (!selectedCourse && !selectedProfessor) { setReviews([]); return }
-    const loadReviews = async () => {
+    if (!selectedCourse && !selectedProfessor) {
       setReviews([])
+      return
+    }
+
+    const loadReviews = async () => {
+      setLoading(true)
+      setReviews([])
+
       try {
         let data = []
+
         if (selectedCourse) {
-          const courseSections = sections.length ? sections : await api.courses.getSections(selectedCourse)
+          const courseSections = sections.length
+            ? sections
+            : await api.courses.getSections(selectedCourse)
+
           const filtered = selectedProfessor
-            ? courseSections.filter((s) => s.professor?.id === selectedProfessor)
+            ? courseSections.filter(
+                (s) => String(s.professor?.id) === String(selectedProfessor)
+              )
             : courseSections
+
           const allReviews = await Promise.all(
             filtered.map((s) =>
               api.sections.getReviews(s.id, { sort_by: sortBy }).catch(() => [])
@@ -251,28 +310,38 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
         } else if (selectedProfessor) {
           data = await api.professors.getReviews(selectedProfessor, { sort_by: sortBy })
         }
+
         setReviews(data || [])
       } catch (err) {
         console.error("Failed to load reviews:", err)
         setReviews([])
+      } finally {
+        setLoading(false)
       }
     }
+
     loadReviews()
   }, [selectedCourse, selectedProfessor, sortBy, sections])
 
   const reloadReviews = async (overrideCourse, overrideProfessor) => {
     const course = overrideCourse !== undefined ? overrideCourse : selectedCourse
     const professor = overrideProfessor !== undefined ? overrideProfessor : selectedProfessor
+
     if (!course && !professor) return
+
     try {
       let data = []
+
       if (course) {
-        const courseSections = (course === selectedCourse && sections.length)
-          ? sections
-          : await api.courses.getSections(course)
+        const courseSections =
+          course === selectedCourse && sections.length
+            ? sections
+            : await api.courses.getSections(course)
+
         const filtered = professor
-          ? courseSections.filter((s) => s.professor?.id === professor)
+          ? courseSections.filter((s) => String(s.professor?.id) === String(professor))
           : courseSections
+
         const allReviews = await Promise.all(
           filtered.map((s) => api.sections.getReviews(s.id, { sort_by: sortBy }).catch(() => []))
         )
@@ -280,6 +349,7 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
       } else if (professor) {
         data = await api.professors.getReviews(professor, { sort_by: sortBy })
       }
+
       setReviews(data || [])
     } catch (err) {
       console.error("Failed to reload reviews:", err)
@@ -289,8 +359,16 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
   const handleCreateReview = async (e) => {
     e.preventDefault()
     setError("")
-    if (!formData.section_id) { setError("Please select a section to review"); return }
-    if (!formData.content || formData.content.length < 20) { setError("Review must be at least 20 characters"); return }
+
+    if (!formData.section_id) {
+      setError("Please select a section to review")
+      return
+    }
+
+    if (!formData.content || formData.content.length < 20) {
+      setError("Review must be at least 20 characters")
+      return
+    }
 
     setLoading(true)
     try {
@@ -298,6 +376,7 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
         content: formData.content,
         rating: parseFloat(formData.rating),
       })
+
       const postedCourse = formCourse
       setFormData({ section_id: "", content: "", rating: 5 })
       setFormCourse("")
@@ -379,8 +458,9 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
     <div className="reviews-page">
       <div className="reviews-inner">
         <header className="reviews-header">
-          <h1>📝 Course &amp; Professor Reviews</h1>
-          {isStudent && (
+          <h1>{isProfessorOwnView ? "📝 Your Reviews" : "📝 Course & Professor Reviews"}</h1>
+
+          {isStudent && !isProfessor && (
             <button
               className="create-review-btn"
               onClick={() => setShowCreateForm(!showCreateForm)}
@@ -401,7 +481,9 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
                   <label>Violation Type</label>
                   <select
                     value={reportData.violation_type}
-                    onChange={(e) => setReportData((r) => ({ ...r, violation_type: e.target.value }))}
+                    onChange={(e) =>
+                      setReportData((r) => ({ ...r, violation_type: e.target.value }))
+                    }
                   >
                     <option value="spam">Spam</option>
                     <option value="harassment">Harassment</option>
@@ -416,7 +498,9 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
                   <label>Severity</label>
                   <select
                     value={reportData.severity}
-                    onChange={(e) => setReportData((r) => ({ ...r, severity: e.target.value }))}
+                    onChange={(e) =>
+                      setReportData((r) => ({ ...r, severity: e.target.value }))
+                    }
                   >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
@@ -430,13 +514,19 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
                   <textarea
                     rows={4}
                     value={reportData.reason}
-                    onChange={(e) => setReportData((r) => ({ ...r, reason: e.target.value }))}
+                    onChange={(e) =>
+                      setReportData((r) => ({ ...r, reason: e.target.value }))
+                    }
                     placeholder="Add context for moderators..."
                   />
                 </div>
 
                 <div className="report-actions">
-                  <button type="button" className="report-cancel" onClick={() => setShowReportForm(false)}>
+                  <button
+                    type="button"
+                    className="report-cancel"
+                    onClick={() => setShowReportForm(false)}
+                  >
                     Cancel
                   </button>
                   <button type="submit" className="report-submit" disabled={loading}>
@@ -448,8 +538,7 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
           </div>
         )}
 
-        {/* Create Review Form */}
-        {showCreateForm && isStudent && (
+        {showCreateForm && isStudent && !isProfessor && (
           <div className="create-review-form">
             <h2>Write a Review</h2>
             <form onSubmit={handleCreateReview}>
@@ -479,7 +568,8 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
                   </option>
                   {formSections.map((section) => (
                     <option key={section.id} value={section.id}>
-                      {section.section_number} — {section.professor?.first_name} {section.professor?.last_name} — {section.semester?.name}
+                      {section.section_number} — {section.professor?.first_name}{" "}
+                      {section.professor?.last_name} — {section.semester?.name}
                     </option>
                   ))}
                 </select>
@@ -519,7 +609,6 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
           </div>
         )}
 
-        {/* Filters */}
         <div className="reviews-filters">
           <div className="filter-group">
             <label>Filter by Course</label>
@@ -528,19 +617,27 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
               value={selectedCourse}
               onChange={(id) => {
                 setSelectedCourse(id)
-                setSelectedProfessor("")
+                if (!isProfessor) {
+                  setSelectedProfessor("")
+                } else {
+                  setSelectedProfessor(myProfessorId)
+                }
               }}
               placeholder="Select a Course"
             />
           </div>
+
           <div className="filter-group">
             <label>Filter by Professor</label>
             <select
               value={selectedProfessor}
-              onChange={(e) => setSelectedProfessor(e.target.value)}
-              disabled={selectedCourse && loadingSections}
+              onChange={(e) => {
+                if (isProfessor) return
+                setSelectedProfessor(e.target.value)
+              }}
+              disabled={isProfessor || (selectedCourse && loadingSections)}
             >
-              <option value="">All Professors</option>
+              {!isProfessor && <option value="">All Professors</option>}
               {availableProfessors.map((prof) => (
                 <option key={prof.id} value={prof.id}>
                   {prof.first_name} {prof.last_name}
@@ -548,6 +645,7 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
               ))}
             </select>
           </div>
+
           <div className="filter-group">
             <label>Sort By</label>
             <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
@@ -560,17 +658,24 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
 
         {!loading && !selectedCourse && !selectedProfessor && (
           <div className="no-reviews">
-            <p>Select a course or professor above to see reviews.</p>
+            <p>
+              {isProfessor
+                ? "No reviews available yet."
+                : "Select a course or professor above to see reviews."}
+            </p>
           </div>
         )}
 
-        {/* Normal Reviews List */}
         <div className="reviews-list">
           {loading && <div className="loading">Loading reviews...</div>}
 
           {!loading && (selectedCourse || selectedProfessor) && reviews.length === 0 && (
             <div className="no-reviews">
-              <p>No approved reviews yet. Be the first to write one!</p>
+              <p>
+                {isProfessorOwnView
+                  ? "No approved reviews about you yet."
+                  : "No approved reviews yet. Be the first to write one!"}
+              </p>
             </div>
           )}
 
@@ -600,8 +705,10 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
                 author={review.student?.username || "anonymous"}
                 isMyReview={isMyReview}
                 onDelete={isMyReview ? () => handleDeleteReview(review.id) : undefined}
-                onEdit={isMyReview ? (newContent) => handleEditReview(review.id, newContent) : undefined}
-                canReport={isStudent}
+                onEdit={
+                  isMyReview ? (newContent) => handleEditReview(review.id, newContent) : undefined
+                }
+                canReport={isStudent && !isProfessor}
                 onReport={() => openReportForm(review.id)}
               />
             )

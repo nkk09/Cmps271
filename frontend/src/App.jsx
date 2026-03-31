@@ -15,7 +15,10 @@ function App() {
     professorId: "",
     token: 0,
   })
+
   const isAdmin = user?.roles?.includes("admin")
+  const isProfessor = user?.roles?.includes("professor")
+  const myProfessorId = user?.professor?.id || ""
 
   const checkAuth = useCallback(async () => {
     if (!api.auth.isLoggedIn()) {
@@ -35,20 +38,14 @@ function App() {
   }, [])
 
   useEffect(() => {
-    // ── Handle Entra OAuth callback ──────────────────────────────────────
-    // After Microsoft login, the backend redirects to:
-    //   FRONTEND_URL/auth/callback?token=<jwt>
-    // We read it once, store it, then strip it from the URL.
     const params = new URLSearchParams(window.location.search)
     const callbackToken = params.get("token")
     const isCallbackPath = window.location.pathname === "/auth/callback"
 
     if (isCallbackPath && callbackToken) {
       api.token.set(callbackToken)
-      // Clean the token out of the URL so it's not visible or bookmarkable
       window.history.replaceState({}, "", "/")
     }
-    // ────────────────────────────────────────────────────────────────────
 
     checkAuth()
 
@@ -95,40 +92,67 @@ function App() {
 
   return (
     <div>
-      <nav style={{
-        background: "linear-gradient(135deg, #8b1538, #5c0f25)",
-        color: "white",
-        padding: "0 30px",
-        display: "flex",
-        gap: "4px",
-        alignItems: "center",
-        height: "52px",
-        position: "sticky",
-        top: 0,
-        zIndex: 200,
-        boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-      }}>
+      <nav
+        style={{
+          background: "linear-gradient(135deg, #8b1538, #5c0f25)",
+          color: "white",
+          padding: "0 30px",
+          display: "flex",
+          gap: "4px",
+          alignItems: "center",
+          height: "52px",
+          position: "sticky",
+          top: 0,
+          zIndex: 200,
+          boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+        }}
+      >
         <span style={{ fontWeight: 700, fontSize: "16px", marginRight: "20px", opacity: 0.9 }}>
           📚 AfterClass
         </span>
+
         <NavButton active={currentPage === "landing"} onClick={() => setCurrentPage("landing")}>
           🏠 Courses
         </NavButton>
-        <NavButton active={currentPage === "reviews"} onClick={() => setCurrentPage("reviews")}>
+
+        <NavButton
+          active={currentPage === "reviews"}
+          onClick={() => {
+            if (isProfessor && myProfessorId) {
+              setReviewNavigation({
+                courseId: "",
+                professorId: myProfessorId,
+                token: Date.now(),
+              })
+            } else {
+              setReviewNavigation({
+                courseId: "",
+                professorId: "",
+                token: Date.now(),
+              })
+            }
+            setCurrentPage("reviews")
+          }}
+        >
           📝 Reviews
         </NavButton>
+
         <NavButton active={currentPage === "me"} onClick={() => setCurrentPage("me")}>
           👤 Profile
         </NavButton>
+
         {isAdmin && (
           <NavButton active={currentPage === "admin"} onClick={() => setCurrentPage("admin")}>
             🛡 Moderation
           </NavButton>
         )}
+
         <div style={{ flex: 1 }} />
+
         <span style={{ fontSize: "13px", opacity: 0.9, marginRight: "8px" }}>
           {user?.student?.username || user?.professor?.first_name || "User"}
         </span>
+
         <NavButton active={false} onClick={handleLogout}>
           Logout
         </NavButton>
@@ -140,6 +164,7 @@ function App() {
           onViewProfessorReviews={handleOpenProfessorReviews}
         />
       )}
+
       {currentPage === "reviews" && (
         <Reviews
           user={user}
@@ -148,6 +173,7 @@ function App() {
           navigationToken={reviewNavigation.token}
         />
       )}
+
       {currentPage === "me" && <Me />}
       {currentPage === "admin" && <Admin user={user} />}
     </div>
