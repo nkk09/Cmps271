@@ -6,6 +6,7 @@ import React, { useState } from "react"
  * reaction: "like" | "dislike" | null
  * onReact: (nextReaction) => void
  * author: string (username)
+ * authorMajor: string | undefined
  * isMyReview: bool
  * onDelete: () => void
  * onEdit: (newContent) => void
@@ -18,6 +19,7 @@ function ReviewCard({
   onReact,
   disableInteract = false,
   author,
+  authorMajor,
   isMyReview,
   onDelete,
   onEdit,
@@ -169,7 +171,7 @@ function ReviewCard({
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
           {author && (
             <span style={{ fontSize: "0.8rem", color: "#888" }}>
-              @{author}
+              @{author}{authorMajor ? ` (${authorMajor})` : ""}
             </span>
           )}
 

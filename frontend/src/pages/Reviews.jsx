@@ -703,6 +703,7 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
                 onReact={(next) => handleInteract(review.id, next, myInteraction)}
                 disableInteract={isMyReview}
                 author={review.student?.username || "anonymous"}
+                authorMajor={review.student?.major || ""}
                 isMyReview={isMyReview}
                 onDelete={isMyReview ? () => handleDeleteReview(review.id) : undefined}
                 onEdit={
