@@ -58,6 +58,16 @@ function ReviewCard({
             {review.professor}
             {review.createdAt ? ` · ${review.createdAt}` : ""}
           </p>
+          {review.rating && (
+            <div style={{ margin: "0.35rem 0 0", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+              <span style={{ fontSize: "1rem" }}>
+                {"⭐".repeat(Math.round(review.rating))}
+              </span>
+              <span style={{ fontSize: "0.85rem", color: "#f59e0b", fontWeight: 600 }}>
+                {review.rating.toFixed(1)}/5
+              </span>
+            </div>
+          )}
         </div>
 
         <div style={{ textAlign: "right", color: "#888", fontSize: "0.875rem" }}>
