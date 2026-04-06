@@ -201,7 +201,6 @@ class ReviewOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     student: StudentOut
-    section: Optional["SectionOut"] = None
     my_interaction: Optional[Literal["like", "dislike"]] = None
 
     model_config = {"from_attributes": True}

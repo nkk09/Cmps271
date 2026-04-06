@@ -45,12 +45,7 @@ async def get_by_section(
             Review.section_id == section_id,
             Review.status == status,
         )
-        .options(
-            selectinload(Review.student),
-            selectinload(Review.section).selectinload(Section.course),
-            selectinload(Review.section).selectinload(Section.professor),
-            selectinload(Review.section).selectinload(Section.semester),
-        )
+        .options(selectinload(Review.student))
     )
     query = _apply_sort(query, sort_by)
     result = await db.execute(query.offset(skip).limit(limit))
@@ -74,12 +69,7 @@ async def get_by_professor(
             Section.professor_id == professor_id,
             Review.status == status,
         )
-        .options(
-            selectinload(Review.student),
-            selectinload(Review.section).selectinload(Section.course),
-            selectinload(Review.section).selectinload(Section.professor),
-            selectinload(Review.section).selectinload(Section.semester),
-        )
+        .options(selectinload(Review.student))
     )
     query = _apply_sort(query, sort_by)
     result = await db.execute(query.offset(skip).limit(limit))
@@ -103,12 +93,7 @@ async def get_by_course(
             Section.course_id == course_id,
             Review.status == status,
         )
-        .options(
-            selectinload(Review.student),
-            selectinload(Review.section).selectinload(Section.course),
-            selectinload(Review.section).selectinload(Section.professor),
-            selectinload(Review.section).selectinload(Section.semester),
-        )
+        .options(selectinload(Review.student))
     )
     query = _apply_sort(query, sort_by)
     result = await db.execute(query.offset(skip).limit(limit))
