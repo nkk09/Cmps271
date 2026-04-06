@@ -178,7 +178,6 @@ function Landing({ onViewCourseDetails, onViewProfessorReviews }) {
               visibleProfessors.map((prof) => (
                 <div key={prof.id} className="professor-card">
                   <h3>{prof.first_name} {prof.last_name}</h3>
-                  <p>🏛 {prof.department || "Department N/A"}</p>
                   <button className="view-btn" onClick={() => onViewProfessorReviews?.(prof.id)}>
                     View Reviews
                   </button>
