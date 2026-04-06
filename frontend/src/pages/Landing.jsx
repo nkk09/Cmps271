@@ -136,7 +136,6 @@ function Landing({ onViewCourseDetails, onViewProfessorReviews }) {
                 <div key={course.id} className="course-card">
                   <div className="course-content">
                     <h3>{course.code} - {course.title}</h3>
-                    <p className="instructor">🏛 {(course.code || "").split(" ")[0] || course.department}</p>
                     <div className="course-meta">
                       <span className="students">📚 Course</span>
                       <span className="rating">⭐ N/A</span>
