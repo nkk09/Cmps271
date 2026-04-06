@@ -8,7 +8,8 @@ function Landing({ onViewCourseDetails, onViewProfessorReviews }) {
   const [filteredCourses, setFilteredCourses] = useState([]);
   const [professors, setProfessors] = useState([]);
   const [filteredProfessors, setFilteredProfessors] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [coursesLoading, setCoursesLoading] = useState(true);
+  const [professorsLoading, setProfessorsLoading] = useState(true);
   const [coursesPage, setCoursesPage] = useState(1);
   const [professorsPage, setProfessorsPage] = useState(1);
   const [courseColumns, setCourseColumns] = useState(1);
@@ -17,24 +18,45 @@ function Landing({ onViewCourseDetails, onViewProfessorReviews }) {
   const coursesGridRef = useRef(null);
   const professorsGridRef = useRef(null);
 
-  // Fetch courses and professors from backend or sample data
+  // Fetch courses and professors after initial paint so the page appears immediately.
   useEffect(() => {
-    const fetchData = async () => {
+    let isActive = true;
+
+    const fetchCourses = async () => {
       try {
         const coursesData = await api.courses.list({ limit: 100 });
+        if (!isActive) return;
         setCourses(coursesData || []);
         setFilteredCourses(coursesData || []);
+      } catch (err) {
+        console.error("Failed to load data:", err);
+      } finally {
+        if (isActive) setCoursesLoading(false);
+      }
+    };
 
+    const fetchProfessors = async () => {
+      try {
         const professorsData = await api.professors.list({ limit: 100 });
+        if (!isActive) return;
         setProfessors(professorsData || []);
         setFilteredProfessors(professorsData || []);
       } catch (err) {
         console.error("Failed to load data:", err);
-        } finally {
-          setLoading(false);
+      } finally {
+        if (isActive) setProfessorsLoading(false);
       }
     };
-    fetchData();
+
+    const frameId = window.requestAnimationFrame(() => {
+      fetchCourses();
+      fetchProfessors();
+    });
+
+    return () => {
+      isActive = false;
+      window.cancelAnimationFrame(frameId);
+    };
   }, []);
 
   // Filter courses based on search & category
@@ -129,7 +151,7 @@ function Landing({ onViewCourseDetails, onViewProfessorReviews }) {
         <div className="courses-section">
           <h2>All Courses</h2>
           <div className="courses-grid" ref={coursesGridRef}>
-            {loading ? (
+            {coursesLoading ? (
               <div className="no-courses"><p>Loading courses...</p></div>
             ) : visibleCourses.length > 0 ? (
               visibleCourses.map((course) => (
@@ -153,7 +175,7 @@ function Landing({ onViewCourseDetails, onViewProfessorReviews }) {
               </div>
             )}
           </div>
-          {!loading && totalCoursePages > 1 && (
+          {!coursesLoading && totalCoursePages > 1 && (
             <div className="pagination">
               {Array.from({ length: totalCoursePages }, (_, i) => i + 1).map((page) => (
                 <button
@@ -173,7 +195,7 @@ function Landing({ onViewCourseDetails, onViewProfessorReviews }) {
         <div className="professors-section">
           <h2>Professors</h2>
           <div className="professors-grid" ref={professorsGridRef}>
-            {loading ? (
+            {professorsLoading ? (
               <div className="no-courses"><p>Loading professors...</p></div>
             ) : visibleProfessors.length > 0 ? (
               visibleProfessors.map((prof) => (
@@ -189,7 +211,7 @@ function Landing({ onViewCourseDetails, onViewProfessorReviews }) {
               <div className="no-courses"><p>No professors found.</p></div>
             )}
           </div>
-          {!loading && totalProfessorPages > 1 && (
+          {!professorsLoading && totalProfessorPages > 1 && (
             <div className="pagination">
               {Array.from({ length: totalProfessorPages }, (_, i) => i + 1).map((page) => (
                 <button
