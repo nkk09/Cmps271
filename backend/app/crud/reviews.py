@@ -12,6 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.review import Review
 
+from app.models.course import Course
+
 ReviewStatus = Literal["pending", "approved", "rejected"]
 SortBy = Literal["newest", "top_rated", "most_liked"]
 
@@ -107,13 +109,11 @@ async def get_by_student(
     limit: int = 20,
 ) -> list[Review]:
     """Get all reviews written by a student (any status — for the student's own view)."""
-    result = await db.execute(
-        select(Review)
-        .where(Review.student_id == student_id)
-        .order_by(desc(Review.created_at))
-        .offset(skip)
-        .limit(limit)
-    )
+   result = await db.execute(
+    select(Review, Course.name)
+    .join(Course, Review.course_id == Course.id)
+    .where(Review.student_id == student_id)
+)
     return list(result.scalars().all())
 
 

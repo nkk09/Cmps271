@@ -15,6 +15,7 @@ import React, { useState } from "react"
  */
 function ReviewCard({
   review,
+  userRole,
   reaction,
   onReact,
   disableInteract = false,
