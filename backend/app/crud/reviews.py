@@ -11,11 +11,21 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.review import Review
-
-from app.models.course import Course
+from app.models.section import Section
 
 ReviewStatus = Literal["pending", "approved", "rejected"]
 SortBy = Literal["newest", "top_rated", "most_liked"]
+
+
+def _review_section_options():
+    return [
+        selectinload(Review.student),
+        selectinload(Review.section).options(
+            selectinload(Section.course),
+            selectinload(Section.professor),
+            selectinload(Section.semester),
+        ),
+    ]
 
 
 async def get_by_id(
@@ -25,10 +35,7 @@ async def get_by_id(
 ) -> Optional[Review]:
     query = select(Review).where(Review.id == review_id)
     if load_relations:
-        query = query.options(
-            selectinload(Review.student),
-            selectinload(Review.section),
-        )
+        query = query.options(*_review_section_options())
     result = await db.execute(query)
     return result.scalar_one_or_none()
 
@@ -47,7 +54,7 @@ async def get_by_section(
             Review.section_id == section_id,
             Review.status == status,
         )
-        .options(selectinload(Review.student))
+        .options(*_review_section_options())
     )
     query = _apply_sort(query, sort_by)
     result = await db.execute(query.offset(skip).limit(limit))
@@ -71,7 +78,7 @@ async def get_by_professor(
             Section.professor_id == professor_id,
             Review.status == status,
         )
-        .options(selectinload(Review.student))
+        .options(*_review_section_options())
     )
     query = _apply_sort(query, sort_by)
     result = await db.execute(query.offset(skip).limit(limit))
@@ -95,7 +102,7 @@ async def get_by_course(
             Section.course_id == course_id,
             Review.status == status,
         )
-        .options(selectinload(Review.student))
+        .options(*_review_section_options())
     )
     query = _apply_sort(query, sort_by)
     result = await db.execute(query.offset(skip).limit(limit))
@@ -109,11 +116,13 @@ async def get_by_student(
     limit: int = 20,
 ) -> list[Review]:
     """Get all reviews written by a student (any status — for the student's own view)."""
-   result = await db.execute(
-    select(Review, Course.name)
-    .join(Course, Review.course_id == Course.id)
-    .where(Review.student_id == student_id)
-)
+    result = await db.execute(
+        select(Review)
+        .where(Review.student_id == student_id)
+        .options(*_review_section_options())
+        .offset(skip)
+        .limit(limit)
+    )
     return list(result.scalars().all())
 
 
@@ -127,7 +136,7 @@ async def get_pending(
         select(Review)
         .where(Review.status == "pending")
         .order_by(Review.created_at)  # oldest first — FIFO moderation queue
-        .options(selectinload(Review.student), selectinload(Review.section))
+        .options(*_review_section_options())
         .offset(skip)
         .limit(limit)
     )

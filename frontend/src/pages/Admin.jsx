@@ -4,6 +4,7 @@ import "../styles/admin.css"
 
 const STATUS_OPTIONS = ["open", "in_review", "resolved", "dismissed"]
 const SEVERITY_OPTIONS = ["low", "medium", "high", "critical"]
+const TYPE_OPTIONS = ["spam", "harassment", "hate_speech", "misinformation", "personal_data", "other"]
 const USER_STATUS_OPTIONS = ["active", "suspended", "inactive"]
 const ROLE_OPTIONS = ["admin", "professor", "student"]
 
@@ -13,6 +14,8 @@ function Admin({ user }) {
   const [error, setError] = useState("")
   const [statusFilter, setStatusFilter] = useState("")
   const [severityFilter, setSeverityFilter] = useState("")
+  const [typeFilter, setTypeFilter] = useState("")
+  const [searchFilter, setSearchFilter] = useState("")
   const [savingId, setSavingId] = useState("")
   const [users, setUsers] = useState([])
   const [usersLoading, setUsersLoading] = useState(false)
@@ -42,6 +45,8 @@ function Admin({ user }) {
       const params = {}
       if (statusFilter) params.status_filter = statusFilter
       if (severityFilter) params.severity = severityFilter
+      if (typeFilter) params.violation_type = typeFilter
+      if (searchFilter.trim().length >= 2) params.search = searchFilter.trim()
       const data = await api.violations.list(params)
       setViolations((data || []).map((v) => ({ ...v, draft_notes: v.admin_notes || "" })))
     } catch (err) {
@@ -69,7 +74,7 @@ function Admin({ user }) {
     loadViolations()
     loadPendingReviews()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, severityFilter, isAdmin])
+  }, [statusFilter, severityFilter, typeFilter, searchFilter, isAdmin])
 
   const loadUsers = async () => {
     if (!isAdmin) return
@@ -274,6 +279,26 @@ function Admin({ user }) {
               ))}
             </select>
           </div>
+
+          <div className="admin-field">
+            <label>Type</label>
+            <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+              <option value="">All</option>
+              {TYPE_OPTIONS.map((type) => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="admin-field admin-search-field">
+            <label>Search</label>
+            <input
+              type="text"
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+              placeholder="Search review text, reporter, or review ID"
+            />
+          </div>
         </section>
 
         {error && <div className="admin-error">{error}</div>}
@@ -360,11 +385,15 @@ function Admin({ user }) {
 
               <p><strong>Case ID:</strong> {v.id}</p>
               <p><strong>Review ID:</strong> {v.review_id}</p>
-              <p><strong>Reporter:</strong> {v.reported_by_student_id || "anonymous"}</p>
+              <p><strong>Reported Review Author:</strong> {v.review?.student?.username || "unknown"}</p>
+              <p><strong>Reporter:</strong> {v.reported_by_student?.username || v.reported_by_student_id || "anonymous"}</p>
               <p><strong>Reason:</strong> {v.reason || "No reason provided"}</p>
               <p><strong>Created:</strong> {new Date(v.created_at).toLocaleString()}</p>
               <p><strong>Resolved:</strong> {v.resolved_at ? new Date(v.resolved_at).toLocaleString() : "-"}</p>
-
+              <div style={{ marginTop: "12px" }}>
+                <p><strong>Reported Review</strong></p>
+                <p>{v.review?.content || "No review content available."}</p>
+              </div>
               <div className="admin-card-controls">
                 <div className="admin-field">
                   <label>Update Status</label>

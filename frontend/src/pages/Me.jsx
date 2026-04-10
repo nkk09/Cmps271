@@ -152,6 +152,11 @@ function Me({ onLogout }) {
                         {review.status}
                       </span>
                     </div>
+                    {review.section?.course && (
+                      <div className="review-course">
+                        <strong>Course:</strong> {review.section.course.code} — {review.section.course.title}
+                      </div>
+                    )}
                     <p className="review-content">{review.content}</p>
                     <div className="review-footer">
                       <span>{new Date(review.created_at).toLocaleDateString()}</span>
