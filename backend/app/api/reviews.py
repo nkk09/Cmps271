@@ -88,7 +88,8 @@ async def create_review(
         rating=body.rating,
     )
     await db.commit()
-    await db.refresh(review)
+    await db.refresh(review, attribute_names=["student", "section"])
+    await db.refresh(review.section, attribute_names=["course", "professor", "semester"])
     return ReviewOut.model_validate(review)
 
 
@@ -144,7 +145,9 @@ async def update_review_status(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
     review = await crud.reviews.update_status(db, review, body.status)
     await db.commit()
-    await db.refresh(review)
+    await db.refresh(review, attribute_names=["student", "section"])
+    if review.section is not None:
+        await db.refresh(review.section, attribute_names=["course", "professor", "semester"])
     return ReviewOut.model_validate(review)
 
 
@@ -174,7 +177,9 @@ async def update_review(
             rating=body.rating or review.rating,
         )
     await db.commit()
-    await db.refresh(review)
+    await db.refresh(review, attribute_names=["student", "section"])
+    if review.section is not None:
+        await db.refresh(review.section, attribute_names=["course", "professor", "semester"])
     return ReviewOut.model_validate(review)
 
 

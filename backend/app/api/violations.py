@@ -66,14 +66,25 @@ async def list_violations(
     _: AdminUser,
     status_filter: Optional[Literal["open", "in_review", "resolved", "dismissed"]] = Query(default=None),
     severity: Optional[Literal["low", "medium", "high", "critical"]] = Query(default=None),
+    violation_type: Optional[Literal[
+        "spam",
+        "harassment",
+        "hate_speech",
+        "misinformation",
+        "personal_data",
+        "other",
+    ]] = Query(default=None),
+    search: Optional[str] = Query(default=None),
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=100),
 ):
-    """Admin-only moderation queue with filtering by status and severity."""
+    """Admin-only moderation queue with filtering by status, severity, type, and text search."""
     violations = await crud.violations.list_for_admin(
         db,
         status=status_filter,
         severity=severity,
+        violation_type=violation_type,
+        search=search,
         skip=skip,
         limit=limit,
     )
