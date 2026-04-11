@@ -149,6 +149,19 @@ def upgrade() -> None:
             )
         )
 
+        # Repair legacy status constraint if it does not include the current in_review state.
+        check_constraints = inspector.get_check_constraints("violations")
+        for constraint in check_constraints:
+            if constraint["name"] == "ck_violation_status":
+                if "in_review" not in constraint.get("sqltext", ""):
+                    op.drop_constraint("ck_violation_status", "violations", type_="check")
+                    op.create_check_constraint(
+                        "ck_violation_status",
+                        "violations",
+                        "status IN ('open', 'in_review', 'resolved', 'dismissed')",
+                    )
+                break
+
     # Enforce non-null updated_at to match ORM.
     if "updated_at" in columns:
         op.alter_column("violations", "updated_at", existing_type=sa.DateTime(), nullable=False)
