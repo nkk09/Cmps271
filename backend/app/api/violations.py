@@ -6,6 +6,8 @@ import uuid
 from typing import Optional, Literal
 
 from fastapi import APIRouter, HTTPException, Query, status
+from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 
 from app.dependencies import DBDep, CurrentStudent, AdminUser
 from app.schemas import ViolationCreate, ViolationAdminUpdate, ViolationOut
@@ -56,7 +58,7 @@ async def report_review_violation(
         reason=body.reason,
     )
     await db.commit()
-    await db.refresh(violation)
+    violation = await crud.violations.get_by_id(db, violation.id, load_relations=True)
     return ViolationOut.model_validate(violation)
 
 
@@ -116,14 +118,61 @@ async def update_violation(
     if not violation:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Violation not found")
 
-    violation = await crud.violations.update_for_admin(
-        db,
-        violation=violation,
-        admin_user_id=admin.id,
-        status=body.status,
-        severity=body.severity,
-        admin_notes=body.admin_notes,
-    )
-    await db.commit()
-    await db.refresh(violation)
+    async def repair_status_constraint() -> bool:
+        try:
+            await db.rollback()
+            await db.execute(
+                text(
+                    "ALTER TABLE violations DROP CONSTRAINT IF EXISTS ck_violation_status"
+                )
+            )
+            await db.execute(
+                text(
+                    "ALTER TABLE violations ADD CONSTRAINT ck_violation_status CHECK (status IN ('open', 'in_review', 'resolved', 'dismissed'))"
+                )
+            )
+            await db.commit()
+            return True
+        except Exception:
+            await db.rollback()
+            return False
+
+    async def perform_update() -> None:
+        nonlocal violation
+        violation = await crud.violations.update_for_admin(
+            db,
+            violation=violation,
+            admin_user_id=admin.id,
+            status=body.status,
+            severity=body.severity,
+            admin_notes=body.admin_notes,
+        )
+        await db.commit()
+
+    try:
+        await perform_update()
+    except IntegrityError as exc:
+        if "ck_violation_status" in str(exc) or "status" in str(exc):
+            if await repair_status_constraint():
+                try:
+                    await perform_update()
+                except IntegrityError as exc2:
+                    await db.rollback()
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Invalid violation update. Please ensure the status is one of open, in_review, resolved, or dismissed.",
+                    ) from exc2
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to repair violation status constraint.",
+                ) from exc
+        else:
+            await db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid violation update. Please ensure the status is one of open, in_review, resolved, or dismissed.",
+            ) from exc
+
+    violation = await crud.violations.get_by_id(db, violation_id, load_relations=True)
     return ViolationOut.model_validate(violation)

@@ -31,7 +31,6 @@ function Admin({ user }) {
   const isAdmin = user?.roles?.includes("admin")
 
   const violationsRef = useRef(null)
-  const recentReviewsRef = useRef(null)
   const pendingReviewsRef = useRef(null)
   const usersRef = useRef(null)
 
@@ -112,13 +111,6 @@ function Admin({ user }) {
     const inReviewCount = violations.filter((v) => v.status === "in_review").length
     const resolvedCount = violations.filter((v) => v.status === "resolved").length
     return { total: violations.length, open: openCount, inReview: inReviewCount, resolved: resolvedCount }
-  }, [violations])
-
-  const recentViolationCases = useMemo(() => {
-    return violations
-      .slice()
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-      .slice(0, 5)
   }, [violations])
 
   const patchLocal = (id, patch) => {
@@ -236,7 +228,6 @@ function Admin({ user }) {
           <button className="admin-save-btn" type="button" onClick={() => scrollTo(pendingReviewsRef)}>Pending Reviews</button>
           <button className="admin-save-btn" type="button" onClick={() => scrollTo(usersRef)}>View Users</button>
           <button className="admin-save-btn" type="button" onClick={() => scrollTo(violationsRef)}>View Violations</button>
-          <button className="admin-save-btn" type="button" onClick={() => scrollTo(recentReviewsRef)}>View Reports</button>
         </section>
 
 
@@ -351,45 +342,32 @@ function Admin({ user }) {
           <p className="admin-empty">No moderation cases found for the selected filters.</p>
         )}
 
-        {recentViolationCases.length > 0 && (
-          <section className="admin-list" ref={recentReviewsRef}>
-            <header className="admin-subheader">
-              <div>
-                <h2>Recent Reported Reviews</h2>
-                <p>Newest review reports that need moderation attention.</p>
-              </div>
-            </header>
-            {recentViolationCases.map((v) => (
-              <article key={`recent-${v.id}`} className="admin-card">
-                <div className="admin-card-row">
-                  <span className="chip">Review ID: {v.review_id}</span>
-                  <span className="chip">Type: {v.violation_type}</span>
-                  <span className={`chip chip-severity chip-${v.severity}`}>Severity: {v.severity}</span>
-                </div>
-                <p><strong>Status:</strong> {v.status}</p>
-                <p><strong>Reported:</strong> {new Date(v.created_at).toLocaleString()}</p>
-                <p><strong>Reason:</strong> {v.reason || "No reason provided"}</p>
-              </article>
-            ))}
-          </section>
-        )}
-
         <section className="admin-list" ref={violationsRef}>
+          <header className="admin-subheader">
+            <div>
+              <h2>Moderation Cases</h2>
+              <p>All reported violations currently under review.</p>
+            </div>
+          </header>
           {violations.map((v) => (
             <article key={v.id} className="admin-card">
               <div className="admin-card-row">
+                <span className="chip">Case ID: {v.id}</span>
+                <span className="chip">Review ID: {v.review_id}</span>
                 <span className="chip">Type: {v.violation_type}</span>
                 <span className={`chip chip-severity chip-${v.severity}`}>Severity: {v.severity}</span>
                 <span className="chip">Status: {v.status}</span>
               </div>
+              <div className="admin-card-row" style={{ marginTop: "8px" }}>
+                <span className="chip">Reported: {new Date(v.created_at).toLocaleString()}</span>
+                <span className="chip">Reporter: {v.reported_by_student?.username || v.reported_by_student_id || "anonymous"}</span>
+                <span className="chip">Author: {v.review?.student?.username || "unknown"}</span>
+                <span className="chip">Resolved: {v.resolved_at ? new Date(v.resolved_at).toLocaleString() : "Not resolved"}</span>
+              </div>
 
-              <p><strong>Case ID:</strong> {v.id}</p>
-              <p><strong>Review ID:</strong> {v.review_id}</p>
-              <p><strong>Reported Review Author:</strong> {v.review?.student?.username || "unknown"}</p>
-              <p><strong>Reporter:</strong> {v.reported_by_student?.username || v.reported_by_student_id || "anonymous"}</p>
-              <p><strong>Reason:</strong> {v.reason || "No reason provided"}</p>
-              <p><strong>Created:</strong> {new Date(v.created_at).toLocaleString()}</p>
-              <p><strong>Resolved:</strong> {v.resolved_at ? new Date(v.resolved_at).toLocaleString() : "-"}</p>
+              <div style={{ marginTop: "12px" }}>
+                <p><strong>Reason:</strong> {v.reason || "No reason provided"}</p>
+              </div>
               <div style={{ marginTop: "12px" }}>
                 <p><strong>Reported Review</strong></p>
                 <p>{v.review?.content || "No review content available."}</p>
