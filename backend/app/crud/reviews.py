@@ -156,6 +156,25 @@ async def get_average_rating_for_section(
     return result.scalar_one_or_none()
 
 
+async def get_average_rating_for_courses(
+    db: AsyncSession,
+    course_ids: list[uuid.UUID],
+) -> dict[uuid.UUID, float]:
+    if not course_ids:
+        return {}
+
+    result = await db.execute(
+        select(Section.course_id, func.avg(Review.rating))
+        .join(Section, Review.section_id == Section.id)
+        .where(
+            Section.course_id.in_(course_ids),
+            Review.status == "approved",
+        )
+        .group_by(Section.course_id)
+    )
+    return {course_id: avg for course_id, avg in result.all()}
+
+
 async def get_average_rating_for_professor(
     db: AsyncSession,
     professor_id: uuid.UUID,

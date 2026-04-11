@@ -138,7 +138,11 @@ function Landing({ onViewCourseDetails, onViewProfessorReviews }) {
                     <h3>{course.code} - {course.title}</h3>
                     <div className="course-meta">
                       <span className="students">📚 Course</span>
-                      <span className="rating">⭐ N/A</span>
+                      <span className="rating">
+                        ⭐ {course.average_rating != null
+                          ? course.average_rating.toFixed(1)
+                          : "N/A"}
+                      </span>
                     </div>
                     <button className="enroll-btn" onClick={() => onViewCourseDetails?.(course.id)}>
                       View Details
