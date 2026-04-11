@@ -40,17 +40,19 @@ function ReviewCard({
     setEditing(false)
   }
 
-  return (
-    <div
-      style={{
-        background: "white",
-        borderRadius: "12px",
-        padding: "1.25rem 1.5rem",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-        textAlign: "left",
-        transition: "transform 0.2s, box-shadow 0.2s",
-      }}
-    >
+return (
+  <div
+    className="review-card"
+    style={{
+      background: "white",
+      borderRadius: "12px",
+      padding: "1.25rem 1.5rem",
+      boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+      textAlign: "left",
+      transition: "transform 0.2s, box-shadow 0.2s",
+      minWidth: 0,
+    }}
+  >
       {/* Header row */}
       <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
         <div>
@@ -102,7 +104,19 @@ function ReviewCard({
           <small style={{ color: "#888" }}>{editContent.length} characters (min 20)</small>
         </div>
       ) : (
-        <p style={{ margin: "0.9rem 0", color: "#444", lineHeight: 1.6 }}>{review.text}</p>
+       <p
+  className="review-text"
+  style={{
+    margin: "0.9rem 0",
+    color: "#444",
+    lineHeight: 1.6,
+    overflowWrap: "anywhere",
+    wordBreak: "break-word",
+    whiteSpace: "pre-wrap",
+  }}
+>
+  {review.text}
+</p>
       )}
 
       {/* Action buttons */}
