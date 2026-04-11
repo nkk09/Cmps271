@@ -15,10 +15,10 @@ import React, { useState } from "react"
  */
 function ReviewCard({
   review,
-  userRole,
   reaction,
   onReact,
   disableInteract = false,
+  showReactions = true,
   author,
   authorMajor,
   isMyReview,
@@ -31,8 +31,8 @@ function ReviewCard({
   const [editing, setEditing] = useState(false)
   const [editContent, setEditContent] = useState(review.text || "")
 
-  const handleLike = () => { if (!disableInteract) onReact(reaction === "like" ? null : "like") }
-  const handleDislike = () => { if (!disableInteract) onReact(reaction === "dislike" ? null : "dislike") }
+  const handleLike = () => { if (!disableInteract && showReactions) onReact(reaction === "like" ? null : "like") }
+  const handleDislike = () => { if (!disableInteract && showReactions) onReact(reaction === "dislike" ? null : "dislike") }
 
   const handleSaveEdit = () => {
     if (editContent.trim().length < 20) return
@@ -121,7 +121,7 @@ return (
 
       {/* Action buttons */}
       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
-        {!editing && (
+        {!editing && showReactions && (
           <>
             <button
               type="button"

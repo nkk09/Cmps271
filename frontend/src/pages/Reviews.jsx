@@ -703,6 +703,7 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
                 reaction={myInteraction}
                 onReact={(next) => handleInteract(review.id, next, myInteraction)}
                 disableInteract={isMyReview}
+                showReactions={!isProfessor}
                 author={review.student?.username || "anonymous"}
                 authorMajor={review.student?.major || ""}
                 isMyReview={isMyReview}
