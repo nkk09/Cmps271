@@ -5,6 +5,7 @@ import api from "../api"
 function Me({ onLogout }) {
   const [userData, setUserData] = useState(null)
   const [myReviews, setMyReviews] = useState([])
+  const [resolvedViolations, setResolvedViolations] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [saving, setSaving] = useState(false)
@@ -24,8 +25,27 @@ function Me({ onLogout }) {
           api.users.getMe(),
           api.users.getMyReviews(),
         ])
+
         setUserData(me)
         setMyReviews(reviews || [])
+
+        try {
+          const violations = await api.violations.list({
+            status_filter: "resolved",
+            limit: 100,
+          })
+          const studentId = me?.student?.id
+          const visibleViolations = (violations || []).filter((violation) => {
+            if (!violation || violation.status !== "resolved") return false
+            if (studentId && violation.reported_by_student_id === studentId) return true
+            if (violation.review?.student?.id === studentId) return true
+            return false
+          })
+          setResolvedViolations(visibleViolations)
+        } catch (violationErr) {
+          console.warn("Unable to fetch violations for profile page:", violationErr)
+          setResolvedViolations([])
+        }
       } catch (err) {
         console.error("Error fetching user:", err)
         setError("Failed to load profile")
@@ -57,14 +77,6 @@ function Me({ onLogout }) {
     ? new Date(userData.user.created_at).toLocaleDateString()
     : "N/A"
   const major = userData?.student?.major || ""
-
-  const reportedViolations =
-    userData?.student?.reported_violations ||
-    userData?.reported_violations ||
-    []
-  const resolvedViolations = (reportedViolations || []).filter(
-    (violation) => violation.status === "resolved"
-  )
 
   const [editMajor, setEditMajor] = useState(major)
 
