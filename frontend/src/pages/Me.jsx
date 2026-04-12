@@ -37,9 +37,7 @@ function Me({ onLogout }) {
           const studentId = me?.student?.id
           const visibleViolations = (violations || []).filter((violation) => {
             if (!violation || violation.status !== "resolved") return false
-            if (studentId && violation.reported_by_student_id === studentId) return true
-            if (violation.review?.student?.id === studentId) return true
-            return false
+            return studentId && violation.review?.student?.id === studentId
           })
           setResolvedViolations(visibleViolations)
         } catch (violationErr) {
@@ -168,20 +166,39 @@ function Me({ onLogout }) {
               ) : (
                 resolvedViolations.map((violation) => (
                   <div key={violation.id} className="violations-card">
-                    <div className="violation-meta-row">
-                      <span className="violation-meta">Case ID: {violation.id}</span>
-                      <span className="violation-meta">Review ID: {violation.review_id}</span>
-                      <span className="violation-meta">Type: {formatLabel(violation.violation_type)}</span>
-                      <span className={`violation-meta severity-${violation.severity}`}>
-                        Severity: {formatLabel(violation.severity)}
-                      </span>
-                      <span className="violation-meta">Status: {formatLabel(violation.status)}</span>
-                    </div>
-
-                    <div className="violation-meta-row" style={{ marginTop: "10px" }}>
-                      <span className="violation-meta">
-                        Reported: {new Date(violation.created_at).toLocaleString()}
-                      </span>
+                    <div className="violation-card-grid">
+                      <div className="violation-meta-group">
+                        <span className="violation-meta-label">Case ID</span>
+                        <span className="violation-meta-value">{violation.id}</span>
+                      </div>
+                      <div className="violation-meta-group">
+                        <span className="violation-meta-label">Review ID</span>
+                        <span className="violation-meta-value">{violation.review_id}</span>
+                      </div>
+                      <div className="violation-meta-group">
+                        <span className="violation-meta-label">Type</span>
+                        <span className="violation-meta-value">{formatLabel(violation.violation_type)}</span>
+                      </div>
+                      <div className={`violation-meta-group severity-${violation.severity}`}>
+                        <span className="violation-meta-label">Severity</span>
+                        <span className="violation-meta-value">{formatLabel(violation.severity)}</span>
+                      </div>
+                      <div className="violation-meta-group">
+                        <span className="violation-meta-label">Status</span>
+                        <span className="violation-meta-value">{formatLabel(violation.status)}</span>
+                      </div>
+                      <div className="violation-meta-group">
+                        <span className="violation-meta-label">Reported</span>
+                        <span className="violation-meta-value">{new Date(violation.created_at).toLocaleString()}</span>
+                      </div>
+                      <div className="violation-meta-group">
+                        <span className="violation-meta-label">Resolved</span>
+                        <span className="violation-meta-value">
+                          {violation.resolved_at
+                            ? new Date(violation.resolved_at).toLocaleString()
+                            : "Unknown"}
+                        </span>
+                      </div>
                     </div>
 
                     {violation.review?.content && (

@@ -127,28 +127,64 @@
 
 .violations-card {
   background: white;
-  padding: 20px;
-  border-radius: 12px;
+  padding: 24px;
+  border-radius: 18px;
   width: 100%;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  margin-bottom: 20px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+  margin-bottom: 24px;
+  border: 1px solid #edf2f7;
 }
 
-.violation-meta-row {
+.violation-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(160px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.violation-meta-group {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  flex-direction: column;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
 }
 
-.violation-meta {
-  display: inline-flex;
-  align-items: center;
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: #f1f3f5;
-  border: 1px solid #e9ecef;
-  color: #343a40;
-  font-size: 13px;
+.violation-meta-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #556987;
+  margin-bottom: 6px;
+}
+
+.violation-meta-value {
+  color: #172b4d;
+  font-size: 14px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.violation-meta-group.severity-low {
+  background: #e9f8ef;
+  border-color: #bfe9c3;
+}
+
+.violation-meta-group.severity-medium {
+  background: #fff6e8;
+  border-color: #ffdeb0;
+}
+
+.violation-meta-group.severity-high {
+  background: #ffe5e5;
+  border-color: #f9c0c0;
+}
+
+.violation-meta-group.severity-critical {
+  background: #ffe9f2;
+  border-color: #f7bdd1;
 }
 
 .severity-low {
