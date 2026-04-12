@@ -24,7 +24,7 @@ function Landing({ onViewCourseDetails, onViewProfessorReviews }) {
 
     const fetchCourses = async () => {
       try {
-        const coursesData = await api.courses.list({ limit: 100 });
+        const coursesData = await api.courses.listAll();
         if (!isActive) return;
         setCourses(coursesData || []);
         setFilteredCourses(coursesData || []);
@@ -37,7 +37,7 @@ function Landing({ onViewCourseDetails, onViewProfessorReviews }) {
 
     const fetchProfessors = async () => {
       try {
-        const professorsData = await api.professors.list({ limit: 100 });
+        const professorsData = await api.professors.listAll();
         if (!isActive) return;
         setProfessors(professorsData || []);
         setFilteredProfessors(professorsData || []);

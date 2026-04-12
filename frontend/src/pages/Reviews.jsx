@@ -227,8 +227,8 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
       setLoading(true)
       try {
         const [coursesData, professorsData] = await Promise.all([
-          api.courses.list({ limit: 100 }),
-          api.professors.list({ limit: 100 }),
+          api.courses.listAll(),
+          api.professors.listAll(),
         ])
         setCourses(coursesData || [])
         setProfessors(professorsData || [])

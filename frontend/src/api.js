@@ -138,6 +138,21 @@ const courses = {
     return request(`/courses${q ? "?" + q : ""}`)
   },
 
+  async listAll(params = {}) {
+    const pageSize = 100
+    let skip = 0
+    const items = []
+
+    while (true) {
+      const page = await this.list({ ...params, skip, limit: pageSize })
+      items.push(...(page || []))
+      if (!page || page.length < pageSize) break
+      skip += pageSize
+    }
+
+    return items
+  },
+
   async get(courseId) {
     return request(`/courses/${courseId}`)
   },
@@ -160,6 +175,21 @@ const professors = {
   async list(params = {}) {
     const q = new URLSearchParams(params).toString()
     return request(`/professors${q ? "?" + q : ""}`)
+  },
+
+  async listAll(params = {}) {
+    const pageSize = 100
+    let skip = 0
+    const items = []
+
+    while (true) {
+      const page = await this.list({ ...params, skip, limit: pageSize })
+      items.push(...(page || []))
+      if (!page || page.length < pageSize) break
+      skip += pageSize
+    }
+
+    return items
   },
 
   async get(professorId) {
