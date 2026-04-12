@@ -108,7 +108,7 @@ function App() {
           color: "white",
           padding: "0 30px",
           display: "flex",
-          gap: "4px",
+          gap: "6px",
           alignItems: "center",
           height: "52px",
           position: "sticky",
@@ -167,11 +167,12 @@ function App() {
             marginRight: "10px",
             background: "rgba(255,255,255,0.14)",
             border: "1px solid rgba(255,255,255,0.18)",
-            padding: "6px 10px",
+            padding: "6px 12px",
             borderRadius: "999px",
+            minHeight: "36px",
           }}
         >
-          <span style={{ fontSize: "13px", fontWeight: 600, whiteSpace: "nowrap" }}>
+          <span style={{ fontSize: "13px", fontWeight: 600, whiteSpace: "nowrap", lineHeight: 1 }}>
             👤 {displayName}
           </span>
 
@@ -185,6 +186,7 @@ function App() {
                 fontSize: "11px",
                 fontWeight: 700,
                 whiteSpace: "nowrap",
+                lineHeight: 1,
               }}
             >
               {formatLabel(displayRole)}
@@ -224,15 +226,21 @@ function NavButton({ active, onClick, children }) {
     <button
       onClick={onClick}
       style={{
-        background: active ? "rgba(255,255,255,0.2)" : "transparent",
+        background: active ? "rgba(255,255,255,0.18)" : "transparent",
         color: "white",
         border: "none",
         padding: "8px 16px",
-        borderRadius: "6px",
+        borderRadius: "8px",
         cursor: "pointer",
-        fontWeight: active ? 600 : 400,
+        fontWeight: active ? 600 : 500,
         fontSize: "14px",
-        transition: "background 0.2s",
+        transition: "background 0.2s ease, transform 0.2s ease",
+        height: "36px",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        lineHeight: 1,
+        whiteSpace: "nowrap",
       }}
     >
       {children}
