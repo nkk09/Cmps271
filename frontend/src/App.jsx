@@ -153,7 +153,7 @@ function App() {
 
         {isAdmin && (
           <NavButton active={currentPage === "admin"} onClick={() => setCurrentPage("admin")}>
-            🛡 Moderation
+            ⚙️ Moderation
           </NavButton>
         )}
 
