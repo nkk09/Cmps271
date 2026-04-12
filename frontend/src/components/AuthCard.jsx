@@ -179,8 +179,9 @@ function AuthCard({ onLoginSuccess }) {
       )}
 
       <hr />
-      <p className="terms">By continuing, you agree to our <a>Terms of Service</a> and <a>Privacy Policy</a></p>
-      <p className="support">Need help? <a>Contact Support</a></p>
+<p style={{ fontSize: "12px", color: "#777", marginTop: "12px", textAlign: "center" }}>
+  Secure login via AUB email. No passwords stored.
+</p>
     </div>
   )
 }
