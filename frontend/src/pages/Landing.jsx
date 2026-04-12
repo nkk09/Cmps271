@@ -158,10 +158,13 @@ function Landing({ onViewCourseDetails, onViewProfessorReviews }) {
                 <div key={course.id} className="course-card">
                   <div className="course-content">
                     <h3>{course.code} - {course.title}</h3>
-                    <p className="instructor">🏛 {(course.code || "").split(" ")[0] || course.department}</p>
                     <div className="course-meta">
                       <span className="students">📚 Course</span>
-                      <span className="rating">⭐ N/A</span>
+                      <span className="rating">
+                        ⭐ {course.average_rating != null
+                          ? course.average_rating.toFixed(1)
+                          : "N/A"}
+                      </span>
                     </div>
                     <button className="enroll-btn" onClick={() => onViewCourseDetails?.(course.id)}>
                       View Details
@@ -201,7 +204,6 @@ function Landing({ onViewCourseDetails, onViewProfessorReviews }) {
               visibleProfessors.map((prof) => (
                 <div key={prof.id} className="professor-card">
                   <h3>{prof.first_name} {prof.last_name}</h3>
-                  <p>🏛 {prof.department || "Department N/A"}</p>
                   <button className="view-btn" onClick={() => onViewProfessorReviews?.(prof.id)}>
                     View Reviews
                   </button>

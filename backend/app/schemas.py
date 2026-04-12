@@ -201,6 +201,7 @@ class ReviewOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     student: StudentOut
+    section: Optional[SectionOut] = None
     my_interaction: Optional[Literal["like", "dislike"]] = None
 
     model_config = {"from_attributes": True}
@@ -248,6 +249,7 @@ class ViolationOut(BaseModel):
     id: uuid.UUID
     review_id: uuid.UUID
     reported_by_student_id: Optional[uuid.UUID]
+    reported_by_student: Optional[StudentOut] = None
     assigned_admin_id: Optional[uuid.UUID]
     violation_type: Literal[
         "spam",
@@ -264,6 +266,7 @@ class ViolationOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     resolved_at: Optional[datetime]
+    review: ReviewOut
 
     model_config = {"from_attributes": True}
 

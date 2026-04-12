@@ -7,6 +7,15 @@ function Me({ onLogout }) {
   const [myReviews, setMyReviews] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState("")
+
+  const formatLabel = (text) => {
+    if (!text) return ""
+    return text
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+  }
 
   useEffect(() => {
     const fetchData = async () => {
@@ -42,7 +51,6 @@ function Me({ onLogout }) {
     }
   }
 
-  // /users/me returns { user, student, professor, roles }
   const username = userData?.student?.username || "N/A"
   const role = userData?.roles?.[0] || "student"
   const memberSince = userData?.user?.created_at
@@ -51,16 +59,10 @@ function Me({ onLogout }) {
   const major = userData?.student?.major || ""
 
   const [editMajor, setEditMajor] = useState(major)
-  const [saving, setSaving] = useState(false)
-  const [message, setMessage] = useState("")
 
-  // whenever userData loads or changes, keep the input in sync
   useEffect(() => {
     setEditMajor(userData?.student?.major || "")
   }, [userData])
-
-
-
 
   return (
     <div className="me-page">
@@ -78,10 +80,12 @@ function Me({ onLogout }) {
                   <label>Anonymous Username</label>
                   <span>{username}</span>
                 </div>
+
                 <div className="info-item">
                   <label>Role</label>
-                  <span>{role}</span>
+                  <span>{formatLabel(role)}</span>
                 </div>
+
                 <div className="info-item">
                   <label>Major</label>
                   <input
@@ -93,30 +97,33 @@ function Me({ onLogout }) {
                     disabled={saving}
                   />
                 </div>
+
                 <div className="info-item">
                   <label>Member Since</label>
                   <span>{memberSince}</span>
                 </div>
               </div>
-              <button className="logout-btn" onClick={handleLogout}>
-                🚪 Logout
-              </button>
+
               <button
                 className="save-btn"
                 onClick={async () => {
-                    console.log("attempting to save major", editMajor, major)
+                  console.log("attempting to save major", editMajor, major)
                   setSaving(true)
+                  setError("")
+                  setMessage("")
+
                   try {
                     const updated = await api.users.updateMe({ major: editMajor })
-                      setUserData((prev) => ({ ...prev, student: updated }))
+                    setUserData((prev) => ({ ...prev, student: updated }))
                     setEditMajor(updated.major || "")
-                    // refresh from server to ensure persistence
+
                     try {
                       const fresh = await api.users.getMe()
                       setUserData(fresh)
                     } catch (e) {
                       console.warn("could not refresh profile", e)
                     }
+
                     setMessage("Major saved successfully")
                     console.log("major saved", updated)
                   } catch (err) {
@@ -149,10 +156,18 @@ function Me({ onLogout }) {
                     <div className="review-header">
                       <span className="review-rating">⭐ {review.rating.toFixed(1)}/5</span>
                       <span className={`status-badge status-${review.status}`}>
-                        {review.status}
+                        {formatLabel(review.status)}
                       </span>
                     </div>
+
+                    {review.section?.course && (
+                      <div className="review-course">
+                        <strong>Course:</strong> {review.section.course.code} — {review.section.course.title}
+                      </div>
+                    )}
+
                     <p className="review-content">{review.content}</p>
+
                     <div className="review-footer">
                       <span>{new Date(review.created_at).toLocaleDateString()}</span>
                       <button

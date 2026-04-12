@@ -23,7 +23,7 @@ from app import crud
 courses_router = APIRouter(prefix="/courses", tags=["courses"])
 
 
-@courses_router.get("", response_model=list[CourseOut])
+@courses_router.get("", response_model=list[CourseOutWithStats])
 async def list_courses(
     db: DBDep,
     department: Optional[str] = Query(default=None),
@@ -33,8 +33,15 @@ async def list_courses(
 ):
     """List all courses, optionally filtered by department or search query."""
     if search:
-        return await crud.courses.search(db, search, skip=skip, limit=limit)
-    return await crud.courses.get_all(db, department=department, skip=skip, limit=limit)
+        courses = await crud.courses.search(db, search, skip=skip, limit=limit)
+    else:
+        courses = await crud.courses.get_all(db, department=department, skip=skip, limit=limit)
+
+    ratings = await crud.reviews.get_average_rating_for_courses(db, [course.id for course in courses])
+    return [
+        CourseOutWithStats(**CourseOut.model_validate(course).model_dump(), average_rating=ratings.get(course.id))
+        for course in courses
+    ]
 
 
 @courses_router.get("/departments", response_model=list[str])
@@ -48,8 +55,8 @@ async def get_course(course_id: uuid.UUID, db: DBDep):
     course = await crud.courses.get_by_id(db, course_id)
     if not course:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
-    avg = await crud.reviews.get_average_rating_for_section(db, course_id)  # approximation
-    return CourseOutWithStats(**CourseOut.model_validate(course).model_dump(), average_rating=avg)
+    avg = await crud.reviews.get_average_rating_for_courses(db, [course_id])
+    return CourseOutWithStats(**CourseOut.model_validate(course).model_dump(), average_rating=avg.get(course_id))
 
 
 @courses_router.get("/{course_id}/sections", response_model=list[SectionOut])

@@ -695,6 +695,7 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
                   course: courseCode,
                   professor: profName,
                   text: review.content,
+                  rating: review.rating,
                   likes: review.likes_count,
                   dislikes: review.dislikes_count,
                   createdAt: new Date(review.created_at).toLocaleDateString(),
@@ -702,6 +703,7 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
                 reaction={myInteraction}
                 onReact={(next) => handleInteract(review.id, next, myInteraction)}
                 disableInteract={isMyReview}
+                showReactions={!isProfessor}
                 author={review.student?.username || "anonymous"}
                 authorMajor={review.student?.major || ""}
                 isMyReview={isMyReview}

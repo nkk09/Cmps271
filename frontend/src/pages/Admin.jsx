@@ -4,8 +4,12 @@ import "../styles/admin.css"
 
 const STATUS_OPTIONS = ["open", "in_review", "resolved", "dismissed"]
 const SEVERITY_OPTIONS = ["low", "medium", "high", "critical"]
+const TYPE_OPTIONS = ["spam", "harassment", "hate_speech", "misinformation", "personal_data", "other"]
 const USER_STATUS_OPTIONS = ["active", "suspended", "inactive"]
 const ROLE_OPTIONS = ["admin", "professor", "student"]
+
+const formatLabel = (text) =>
+  text.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
 
 function Admin({ user }) {
   const [violations, setViolations] = useState([])
@@ -13,6 +17,8 @@ function Admin({ user }) {
   const [error, setError] = useState("")
   const [statusFilter, setStatusFilter] = useState("")
   const [severityFilter, setSeverityFilter] = useState("")
+  const [typeFilter, setTypeFilter] = useState("")
+  const [searchFilter, setSearchFilter] = useState("")
   const [savingId, setSavingId] = useState("")
   const [users, setUsers] = useState([])
   const [usersLoading, setUsersLoading] = useState(false)
@@ -28,7 +34,6 @@ function Admin({ user }) {
   const isAdmin = user?.roles?.includes("admin")
 
   const violationsRef = useRef(null)
-  const recentReviewsRef = useRef(null)
   const pendingReviewsRef = useRef(null)
   const usersRef = useRef(null)
 
@@ -42,6 +47,8 @@ function Admin({ user }) {
       const params = {}
       if (statusFilter) params.status_filter = statusFilter
       if (severityFilter) params.severity = severityFilter
+      if (typeFilter) params.violation_type = typeFilter
+      if (searchFilter.trim().length >= 2) params.search = searchFilter.trim()
       const data = await api.violations.list(params)
       setViolations((data || []).map((v) => ({ ...v, draft_notes: v.admin_notes || "" })))
     } catch (err) {
@@ -69,7 +76,7 @@ function Admin({ user }) {
     loadViolations()
     loadPendingReviews()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, severityFilter, isAdmin])
+  }, [statusFilter, severityFilter, typeFilter, searchFilter, isAdmin])
 
   const loadUsers = async () => {
     if (!isAdmin) return
@@ -107,13 +114,6 @@ function Admin({ user }) {
     const inReviewCount = violations.filter((v) => v.status === "in_review").length
     const resolvedCount = violations.filter((v) => v.status === "resolved").length
     return { total: violations.length, open: openCount, inReview: inReviewCount, resolved: resolvedCount }
-  }, [violations])
-
-  const recentViolationCases = useMemo(() => {
-    return violations
-      .slice()
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-      .slice(0, 5)
   }, [violations])
 
   const patchLocal = (id, patch) => {
@@ -227,13 +227,18 @@ function Admin({ user }) {
             {loading ? "Refreshing..." : "Refresh"}
           </button>
         </header>
-        <section className="admin-actions">
-          <button className="admin-save-btn" type="button" onClick={() => scrollTo(pendingReviewsRef)}>Pending Reviews</button>
-          <button className="admin-save-btn" type="button" onClick={() => scrollTo(usersRef)}>View Users</button>
-          <button className="admin-save-btn" type="button" onClick={() => scrollTo(violationsRef)}>View Violations</button>
-          <button className="admin-save-btn" type="button" onClick={() => scrollTo(recentReviewsRef)}>View Reports</button>
-        </section>
 
+        <section className="admin-actions">
+          <button className="admin-save-btn" type="button" onClick={() => scrollTo(pendingReviewsRef)}>
+            Pending Reviews
+          </button>
+          <button className="admin-save-btn" type="button" onClick={() => scrollTo(usersRef)}>
+            View Users
+          </button>
+          <button className="admin-save-btn" type="button" onClick={() => scrollTo(violationsRef)}>
+            View Violations
+          </button>
+        </section>
 
         <section className="admin-stats">
           <article>
@@ -260,7 +265,7 @@ function Admin({ user }) {
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="">All</option>
               {STATUS_OPTIONS.map((status) => (
-                <option key={status} value={status}>{status}</option>
+                <option key={status} value={status}>{formatLabel(status)}</option>
               ))}
             </select>
           </div>
@@ -270,15 +275,34 @@ function Admin({ user }) {
             <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)}>
               <option value="">All</option>
               {SEVERITY_OPTIONS.map((severity) => (
-                <option key={severity} value={severity}>{severity}</option>
+                <option key={severity} value={severity}>{formatLabel(severity)}</option>
               ))}
             </select>
+          </div>
+
+          <div className="admin-field">
+            <label>Type</label>
+            <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+              <option value="">All</option>
+              {TYPE_OPTIONS.map((type) => (
+                <option key={type} value={type}>{formatLabel(type)}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="admin-field admin-search-field">
+            <label>Search</label>
+            <input
+              type="text"
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+              placeholder="Search review text, reporter, or review ID"
+            />
           </div>
         </section>
 
         {error && <div className="admin-error">{error}</div>}
 
-        {/* Pending Reviews Moderation */}
         <section className="admin-list" ref={pendingReviewsRef}>
           <header className="admin-subheader">
             <div>
@@ -289,18 +313,22 @@ function Admin({ user }) {
               {pendingLoading ? "Refreshing..." : "Refresh"}
             </button>
           </header>
+
           {!pendingLoading && pendingReviews.length === 0 && (
             <p className="admin-empty">No reviews pending approval.</p>
           )}
+
           {pendingReviews.map((r) => (
             <article key={r.id} className="admin-card">
               <div className="admin-card-row">
                 <span className="chip">By: {r.student?.username || "unknown"}</span>
-                <span className={`chip chip-severity chip-medium`}>Rating: {r.rating}/5</span>
+                <span className="chip chip-severity chip-medium">Rating: {r.rating}/5</span>
                 <span className="chip">Submitted: {new Date(r.created_at).toLocaleString()}</span>
               </div>
+
               <p><strong>Review ID:</strong> {r.id}</p>
               <p style={{ marginTop: "8px" }}>{r.content}</p>
+
               <div className="admin-card-controls" style={{ marginTop: "14px" }}>
                 <button
                   className="admin-save-btn"
@@ -326,51 +354,52 @@ function Admin({ user }) {
           <p className="admin-empty">No moderation cases found for the selected filters.</p>
         )}
 
-        {recentViolationCases.length > 0 && (
-          <section className="admin-list" ref={recentReviewsRef}>
-            <header className="admin-subheader">
-              <div>
-                <h2>Recent Reported Reviews</h2>
-                <p>Newest review reports that need moderation attention.</p>
-              </div>
-            </header>
-            {recentViolationCases.map((v) => (
-              <article key={`recent-${v.id}`} className="admin-card">
-                <div className="admin-card-row">
-                  <span className="chip">Review ID: {v.review_id}</span>
-                  <span className="chip">Type: {v.violation_type}</span>
-                  <span className={`chip chip-severity chip-${v.severity}`}>Severity: {v.severity}</span>
-                </div>
-                <p><strong>Status:</strong> {v.status}</p>
-                <p><strong>Reported:</strong> {new Date(v.created_at).toLocaleString()}</p>
-                <p><strong>Reason:</strong> {v.reason || "No reason provided"}</p>
-              </article>
-            ))}
-          </section>
-        )}
-
         <section className="admin-list" ref={violationsRef}>
+          <header className="admin-subheader">
+            <div>
+              <h2>Moderation Cases</h2>
+              <p>All reported violations currently under review.</p>
+            </div>
+          </header>
+
           {violations.map((v) => (
             <article key={v.id} className="admin-card">
               <div className="admin-card-row">
-                <span className="chip">Type: {v.violation_type}</span>
-                <span className={`chip chip-severity chip-${v.severity}`}>Severity: {v.severity}</span>
-                <span className="chip">Status: {v.status}</span>
+                <span className="chip">Case ID: {v.id}</span>
+                <span className="chip">Review ID: {v.review_id}</span>
+                <span className="chip">Type: {formatLabel(v.violation_type)}</span>
+                <span className={`chip chip-severity chip-${v.severity}`}>
+                  Severity: {formatLabel(v.severity)}
+                </span>
+                <span className="chip">Status: {formatLabel(v.status)}</span>
               </div>
 
-              <p><strong>Case ID:</strong> {v.id}</p>
-              <p><strong>Review ID:</strong> {v.review_id}</p>
-              <p><strong>Reporter:</strong> {v.reported_by_student_id || "anonymous"}</p>
-              <p><strong>Reason:</strong> {v.reason || "No reason provided"}</p>
-              <p><strong>Created:</strong> {new Date(v.created_at).toLocaleString()}</p>
-              <p><strong>Resolved:</strong> {v.resolved_at ? new Date(v.resolved_at).toLocaleString() : "-"}</p>
+              <div className="admin-card-row" style={{ marginTop: "8px" }}>
+                <span className="chip">Reported: {new Date(v.created_at).toLocaleString()}</span>
+                <span className="chip">
+                  Reporter: {v.reported_by_student?.username || v.reported_by_student_id || "anonymous"}
+                </span>
+                <span className="chip">Author: {v.review?.student?.username || "unknown"}</span>
+                <span className="chip">
+                  Resolved: {v.resolved_at ? new Date(v.resolved_at).toLocaleString() : "Not resolved"}
+                </span>
+              </div>
+
+              <div style={{ marginTop: "12px" }}>
+                <p><strong>Reason:</strong> {v.reason || "No reason provided"}</p>
+              </div>
+
+              <div style={{ marginTop: "12px" }}>
+                <p><strong>Reported Review</strong></p>
+                <p>{v.review?.content || "No review content available."}</p>
+              </div>
 
               <div className="admin-card-controls">
                 <div className="admin-field">
                   <label>Update Status</label>
                   <select value={v.status} onChange={(e) => patchLocal(v.id, { status: e.target.value })}>
                     {STATUS_OPTIONS.map((status) => (
-                      <option key={status} value={status}>{status}</option>
+                      <option key={status} value={status}>{formatLabel(status)}</option>
                     ))}
                   </select>
                 </div>
@@ -379,7 +408,7 @@ function Admin({ user }) {
                   <label>Update Severity</label>
                   <select value={v.severity} onChange={(e) => patchLocal(v.id, { severity: e.target.value })}>
                     {SEVERITY_OPTIONS.map((severity) => (
-                      <option key={severity} value={severity}>{severity}</option>
+                      <option key={severity} value={severity}>{formatLabel(severity)}</option>
                     ))}
                   </select>
                 </div>
@@ -423,7 +452,7 @@ function Admin({ user }) {
               <select value={userRoleFilter} onChange={(e) => setUserRoleFilter(e.target.value)}>
                 <option value="">All</option>
                 {ROLE_OPTIONS.map((r) => (
-                  <option key={r} value={r}>{r}</option>
+                  <option key={r} value={r}>{formatLabel(r)}</option>
                 ))}
               </select>
             </div>
@@ -433,7 +462,7 @@ function Admin({ user }) {
               <select value={userStatusFilter} onChange={(e) => setUserStatusFilter(e.target.value)}>
                 <option value="">All</option>
                 {USER_STATUS_OPTIONS.map((s) => (
-                  <option key={s} value={s}>{s}</option>
+                  <option key={s} value={s}>{formatLabel(s)}</option>
                 ))}
               </select>
             </div>
@@ -475,9 +504,10 @@ function Admin({ user }) {
                       onChange={(e) => patchUserLocal(u.id, { draft_status: e.target.value })}
                     >
                       {USER_STATUS_OPTIONS.map((s) => (
-                        <option key={s} value={s}>{s}</option>
+                        <option key={s} value={s}>{formatLabel(s)}</option>
                       ))}
                     </select>
+
                     <button
                       className="admin-save-btn"
                       onClick={() => saveUserStatus(u)}
@@ -497,7 +527,7 @@ function Admin({ user }) {
                             checked={(u.draft_roles || []).includes(roleName)}
                             onChange={(e) => toggleRole(u.id, roleName, e.target.checked)}
                           />
-                          <span>{roleName}</span>
+                          <span>{formatLabel(roleName)}</span>
                         </label>
                       ))}
                     </div>

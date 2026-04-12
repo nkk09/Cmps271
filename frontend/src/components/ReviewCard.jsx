@@ -18,6 +18,7 @@ function ReviewCard({
   reaction,
   onReact,
   disableInteract = false,
+  showReactions = true,
   author,
   authorMajor,
   isMyReview,
@@ -30,8 +31,8 @@ function ReviewCard({
   const [editing, setEditing] = useState(false)
   const [editContent, setEditContent] = useState(review.text || "")
 
-  const handleLike = () => { if (!disableInteract) onReact(reaction === "like" ? null : "like") }
-  const handleDislike = () => { if (!disableInteract) onReact(reaction === "dislike" ? null : "dislike") }
+  const handleLike = () => { if (!disableInteract && showReactions) onReact(reaction === "like" ? null : "like") }
+  const handleDislike = () => { if (!disableInteract && showReactions) onReact(reaction === "dislike" ? null : "dislike") }
 
   const handleSaveEdit = () => {
     if (editContent.trim().length < 20) return
@@ -39,17 +40,19 @@ function ReviewCard({
     setEditing(false)
   }
 
-  return (
-    <div
-      style={{
-        background: "white",
-        borderRadius: "12px",
-        padding: "1.25rem 1.5rem",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-        textAlign: "left",
-        transition: "transform 0.2s, box-shadow 0.2s",
-      }}
-    >
+return (
+  <div
+    className="review-card"
+    style={{
+      background: "white",
+      borderRadius: "12px",
+      padding: "1.25rem 1.5rem",
+      boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+      textAlign: "left",
+      transition: "transform 0.2s, box-shadow 0.2s",
+      minWidth: 0,
+    }}
+  >
       {/* Header row */}
       <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
         <div>
@@ -58,6 +61,16 @@ function ReviewCard({
             {review.professor}
             {review.createdAt ? ` · ${review.createdAt}` : ""}
           </p>
+          {review.rating && (
+            <div style={{ margin: "0.35rem 0 0", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+              <span style={{ fontSize: "1rem" }}>
+                {"⭐".repeat(Math.round(review.rating))}
+              </span>
+              <span style={{ fontSize: "0.85rem", color: "#f59e0b", fontWeight: 600 }}>
+                {review.rating.toFixed(1)}/5
+              </span>
+            </div>
+          )}
         </div>
 
         <div style={{ textAlign: "right", color: "#888", fontSize: "0.875rem" }}>
@@ -91,12 +104,24 @@ function ReviewCard({
           <small style={{ color: "#888" }}>{editContent.length} characters (min 20)</small>
         </div>
       ) : (
-        <p style={{ margin: "0.9rem 0", color: "#444", lineHeight: 1.6 }}>{review.text}</p>
+       <p
+  className="review-text"
+  style={{
+    margin: "0.9rem 0",
+    color: "#444",
+    lineHeight: 1.6,
+    overflowWrap: "anywhere",
+    wordBreak: "break-word",
+    whiteSpace: "pre-wrap",
+  }}
+>
+  {review.text}
+</p>
       )}
 
       {/* Action buttons */}
       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
-        {!editing && (
+        {!editing && showReactions && (
           <>
             <button
               type="button"
