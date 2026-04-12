@@ -194,9 +194,25 @@ function App() {
           )}
         </div>
 
-        <NavButton active={false} onClick={handleLogout}>
-          Logout
-        </NavButton>
+<button
+  onClick={handleLogout}
+  style={{
+    background: "rgba(255,255,255,0.15)",
+    color: "white",
+    border: "1px solid rgba(255,255,255,0.25)",
+    padding: "6px 14px",
+    borderRadius: "999px",
+    cursor: "pointer",
+    fontSize: "13px",
+    fontWeight: 600,
+    transition: "all 0.2s ease",
+    height: "36px",
+    display: "flex",
+    alignItems: "center",
+  }}
+>
+  🚪 Logout
+</button>
       </nav>
 
       {currentPage === "landing" && (
