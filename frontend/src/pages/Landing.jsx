@@ -18,7 +18,12 @@ function Landing({ onViewCourseDetails, onViewProfessorReviews }) {
   const coursesGridRef = useRef(null);
   const professorsGridRef = useRef(null);
 
-  // Fetch courses and professors after initial paint so the page appears immediately.
+  const getProfessorInitials = (prof) => {
+    const first = prof.first_name?.[0] || "";
+    const last = prof.last_name?.[0] || "";
+    return `${first}${last}`.toUpperCase() || "P";
+  };
+
   useEffect(() => {
     let isActive = true;
 
@@ -59,7 +64,6 @@ function Landing({ onViewCourseDetails, onViewProfessorReviews }) {
     };
   }, []);
 
-  // Filter courses based on search & category
   useEffect(() => {
     let filtered = courses;
     if (searchQuery) {
@@ -71,7 +75,6 @@ function Landing({ onViewCourseDetails, onViewProfessorReviews }) {
     }
     setFilteredCourses(filtered);
 
-    // Filter professors by search query
     let profFiltered = professors;
     if (searchQuery) {
       profFiltered = profFiltered.filter((p) =>
@@ -134,9 +137,7 @@ function Landing({ onViewCourseDetails, onViewProfessorReviews }) {
 
   return (
     <div className="landing-page">
-      {/* Main Content */}
       <main className="landing-main">
-        {/* Search Bar */}
         <div className="search-section">
           <input
             type="text"
@@ -147,7 +148,6 @@ function Landing({ onViewCourseDetails, onViewProfessorReviews }) {
           />
         </div>
 
-        {/* Courses */}
         <div className="courses-section">
           <h2>All Courses</h2>
           <div className="courses-grid" ref={coursesGridRef}>
@@ -178,6 +178,7 @@ function Landing({ onViewCourseDetails, onViewProfessorReviews }) {
               </div>
             )}
           </div>
+
           {!coursesLoading && totalCoursePages > 1 && (
             <div className="pagination">
               {Array.from({ length: totalCoursePages }, (_, i) => i + 1).map((page) => (
@@ -194,7 +195,6 @@ function Landing({ onViewCourseDetails, onViewProfessorReviews }) {
           )}
         </div>
 
-        {/* Professors */}
         <div className="professors-section">
           <h2>Professors</h2>
           <div className="professors-grid" ref={professorsGridRef}>
@@ -203,7 +203,9 @@ function Landing({ onViewCourseDetails, onViewProfessorReviews }) {
             ) : visibleProfessors.length > 0 ? (
               visibleProfessors.map((prof) => (
                 <div key={prof.id} className="professor-card">
+                  <div className="prof-avatar">{getProfessorInitials(prof)}</div>
                   <h3>{prof.first_name} {prof.last_name}</h3>
+                  <p className="prof-subtitle">AUB Professor</p>
                   <button className="view-btn" onClick={() => onViewProfessorReviews?.(prof.id)}>
                     View Reviews
                   </button>
@@ -213,6 +215,7 @@ function Landing({ onViewCourseDetails, onViewProfessorReviews }) {
               <div className="no-courses"><p>No professors found.</p></div>
             )}
           </div>
+
           {!professorsLoading && totalProfessorPages > 1 && (
             <div className="pagination">
               {Array.from({ length: totalProfessorPages }, (_, i) => i + 1).map((page) => (
@@ -228,8 +231,6 @@ function Landing({ onViewCourseDetails, onViewProfessorReviews }) {
             </div>
           )}
         </div>
-
-        
       </main>
     </div>
   );
