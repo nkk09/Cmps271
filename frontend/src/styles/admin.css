@@ -249,7 +249,7 @@
 }
 
 .role-chip {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   border: 1px solid #d1d5db;
@@ -257,6 +257,18 @@
   padding: 6px 10px;
   font-size: 0.85rem;
   color: #374151;
+  width: fit-content;
+  white-space: nowrap;
+}
+
+.role-chip input {
+  width: auto;
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.role-chip span {
+  white-space: nowrap;
 }
 
 @media (max-width: 860px) {
