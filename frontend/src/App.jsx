@@ -35,6 +35,7 @@ function App() {
       setLoading(false)
       return
     }
+
     setLoading(true)
     try {
       const userData = await api.users.getMe()
@@ -108,7 +109,7 @@ function App() {
           color: "white",
           padding: "0 30px",
           display: "flex",
-          gap: "6px",
+          gap: "12px",
           alignItems: "center",
           height: "52px",
           position: "sticky",
@@ -117,12 +118,13 @@ function App() {
           boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
         }}
       >
-        <span style={{ fontWeight: 700, fontSize: "16px", marginRight: "20px", opacity: 0.9 }}>
+        <span style={{ fontWeight: 700, fontSize: "16px", marginRight: "10px", opacity: 0.9 }}>
           📚 AfterClass
         </span>
 
         <NavButton active={currentPage === "landing"} onClick={() => setCurrentPage("landing")}>
-          🏠 Courses
+          <span style={{ fontSize: "14px" }}>🏠</span>
+          <span>Courses</span>
         </NavButton>
 
         <NavButton
@@ -144,16 +146,19 @@ function App() {
             setCurrentPage("reviews")
           }}
         >
-          📝 Reviews
+          <span style={{ fontSize: "14px" }}>📝</span>
+          <span>Reviews</span>
         </NavButton>
 
         <NavButton active={currentPage === "me"} onClick={() => setCurrentPage("me")}>
-          👤 Profile
+          <span style={{ fontSize: "14px" }}>👤</span>
+          <span>Profile</span>
         </NavButton>
 
         {isAdmin && (
           <NavButton active={currentPage === "admin"} onClick={() => setCurrentPage("admin")}>
-            ⚙️ Moderation
+            <span style={{ fontSize: "14px" }}>⚙️</span>
+            <span>Moderation</span>
           </NavButton>
         )}
 
@@ -172,7 +177,14 @@ function App() {
             minHeight: "36px",
           }}
         >
-          <span style={{ fontSize: "13px", fontWeight: 600, whiteSpace: "nowrap", lineHeight: 1 }}>
+          <span
+            style={{
+              fontSize: "13px",
+              fontWeight: 600,
+              whiteSpace: "nowrap",
+              lineHeight: 1,
+            }}
+          >
             👤 {displayName}
           </span>
 
@@ -194,25 +206,29 @@ function App() {
           )}
         </div>
 
-<button
-  onClick={handleLogout}
-  style={{
-    background: "rgba(255,255,255,0.15)",
-    color: "white",
-    border: "1px solid rgba(255,255,255,0.25)",
-    padding: "6px 14px",
-    borderRadius: "999px",
-    cursor: "pointer",
-    fontSize: "13px",
-    fontWeight: 600,
-    transition: "all 0.2s ease",
-    height: "36px",
-    display: "flex",
-    alignItems: "center",
-  }}
->
-  🚪 Logout
-</button>
+        <button
+          onClick={handleLogout}
+          style={{
+            background: "rgba(255,255,255,0.15)",
+            color: "white",
+            border: "1px solid rgba(255,255,255,0.25)",
+            padding: "6px 14px",
+            borderRadius: "999px",
+            cursor: "pointer",
+            fontSize: "13px",
+            fontWeight: 600,
+            transition: "all 0.2s ease",
+            height: "36px",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "6px",
+            whiteSpace: "nowrap",
+          }}
+        >
+          <span style={{ fontSize: "14px" }}>🚪</span>
+          <span>Logout</span>
+        </button>
       </nav>
 
       {currentPage === "landing" && (
@@ -245,16 +261,17 @@ function NavButton({ active, onClick, children }) {
         background: active ? "rgba(255,255,255,0.18)" : "transparent",
         color: "white",
         border: "none",
-        padding: "8px 16px",
+        padding: "8px 18px",
         borderRadius: "8px",
         cursor: "pointer",
         fontWeight: active ? 600 : 500,
         fontSize: "14px",
-        transition: "background 0.2s ease, transform 0.2s ease",
+        transition: "background 0.2s ease",
         height: "36px",
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
+        gap: "6px",
         lineHeight: 1,
         whiteSpace: "nowrap",
       }}
