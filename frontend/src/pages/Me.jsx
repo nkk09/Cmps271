@@ -98,9 +98,6 @@ function Me({ onLogout }) {
                   <span>{memberSince}</span>
                 </div>
               </div>
-              <button className="logout-btn" onClick={handleLogout}>
-                🚪 Logout
-              </button>
               <button
                 className="save-btn"
                 onClick={async () => {
