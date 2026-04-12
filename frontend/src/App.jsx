@@ -20,6 +20,16 @@ function App() {
   const isProfessor = user?.roles?.includes("professor")
   const myProfessorId = user?.professor?.id || ""
 
+  const displayName = user?.student?.username || user?.professor?.first_name || "User"
+  const displayRole = user?.roles?.[0] || ""
+
+  const formatLabel = (text) => {
+    if (!text) return ""
+    return text
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+  }
+
   const checkAuth = useCallback(async () => {
     if (!api.auth.isLoggedIn()) {
       setLoading(false)
@@ -149,9 +159,38 @@ function App() {
 
         <div style={{ flex: 1 }} />
 
-        <span style={{ fontSize: "13px", opacity: 0.9, marginRight: "8px" }}>
-          {user?.student?.username || user?.professor?.first_name || "User"}
-        </span>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            marginRight: "10px",
+            background: "rgba(255,255,255,0.14)",
+            border: "1px solid rgba(255,255,255,0.18)",
+            padding: "6px 10px",
+            borderRadius: "999px",
+          }}
+        >
+          <span style={{ fontSize: "13px", fontWeight: 600, whiteSpace: "nowrap" }}>
+            👤 {displayName}
+          </span>
+
+          {displayRole && (
+            <span
+              style={{
+                background: "rgba(255,255,255,0.92)",
+                color: "#8b1538",
+                padding: "2px 7px",
+                borderRadius: "999px",
+                fontSize: "11px",
+                fontWeight: 700,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {formatLabel(displayRole)}
+            </span>
+          )}
+        </div>
 
         <NavButton active={false} onClick={handleLogout}>
           Logout
