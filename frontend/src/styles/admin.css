@@ -45,6 +45,7 @@
   background: #8b1538;
   color: #fff;
   margin-top: 8px;
+  width: 100%;
 }
 
 .admin-refresh-btn:disabled,
@@ -91,7 +92,7 @@
 .admin-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .admin-field label {
@@ -106,6 +107,8 @@
   border-radius: 8px;
   padding: 8px 10px;
   font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .admin-list {
@@ -231,25 +234,27 @@
 }
 
 .admin-user-controls {
-  margin-top: 10px;
+  margin-top: 12px;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
 }
 
 .role-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
+  align-items: center;
 }
 
 .role-chip {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 6px;
   border: 1px solid #d1d5db;
   border-radius: 999px;
-  padding: 4px 9px;
+  padding: 6px 10px;
   font-size: 0.85rem;
   color: #374151;
 }
