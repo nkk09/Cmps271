@@ -24,6 +24,22 @@ function Landing({ onViewCourseDetails, onViewProfessorReviews }) {
     return `${first}${last}`.toUpperCase() || "P";
   };
 
+  const getVisiblePages = (current, total) => {
+    if (total <= 7) {
+      return Array.from({ length: total }, (_, i) => i + 1);
+    }
+
+    if (current <= 4) {
+      return [1, 2, 3, 4, 5, "...", total];
+    }
+
+    if (current >= total - 3) {
+      return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+    }
+
+    return [1, "...", current - 1, current, current + 1, "...", total];
+  };
+
   useEffect(() => {
     let isActive = true;
 
@@ -181,16 +197,22 @@ function Landing({ onViewCourseDetails, onViewProfessorReviews }) {
 
           {!coursesLoading && totalCoursePages > 1 && (
             <div className="pagination">
-              {Array.from({ length: totalCoursePages }, (_, i) => i + 1).map((page) => (
-                <button
-                  key={`course-page-${page}`}
-                  className={`page-btn ${safeCoursesPage === page ? "active" : ""}`}
-                  onClick={() => setCoursesPage(page)}
-                  type="button"
-                >
-                  {page}
-                </button>
-              ))}
+              {getVisiblePages(safeCoursesPage, totalCoursePages).map((page, index) =>
+                page === "..." ? (
+                  <span key={`course-ellipsis-${index}`} className="page-ellipsis">
+                    ...
+                  </span>
+                ) : (
+                  <button
+                    key={`course-page-${page}`}
+                    className={`page-btn ${safeCoursesPage === page ? "active" : ""}`}
+                    onClick={() => setCoursesPage(page)}
+                    type="button"
+                  >
+                    {page}
+                  </button>
+                )
+              )}
             </div>
           )}
         </div>
@@ -218,16 +240,22 @@ function Landing({ onViewCourseDetails, onViewProfessorReviews }) {
 
           {!professorsLoading && totalProfessorPages > 1 && (
             <div className="pagination">
-              {Array.from({ length: totalProfessorPages }, (_, i) => i + 1).map((page) => (
-                <button
-                  key={`prof-page-${page}`}
-                  className={`page-btn ${safeProfessorsPage === page ? "active" : ""}`}
-                  onClick={() => setProfessorsPage(page)}
-                  type="button"
-                >
-                  {page}
-                </button>
-              ))}
+              {getVisiblePages(safeProfessorsPage, totalProfessorPages).map((page, index) =>
+                page === "..." ? (
+                  <span key={`prof-ellipsis-${index}`} className="page-ellipsis">
+                    ...
+                  </span>
+                ) : (
+                  <button
+                    key={`prof-page-${page}`}
+                    className={`page-btn ${safeProfessorsPage === page ? "active" : ""}`}
+                    onClick={() => setProfessorsPage(page)}
+                    type="button"
+                  >
+                    {page}
+                  </button>
+                )
+              )}
             </div>
           )}
         </div>

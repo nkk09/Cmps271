@@ -145,6 +145,7 @@
   display: flex;
   gap: 8px;
   justify-content: center;
+  align-items: center;
   margin-top: 18px;
   flex-wrap: wrap;
 }
@@ -170,6 +171,16 @@
   border-color: #8b1538;
   background: #8b1538;
   color: #fff;
+}
+
+.page-ellipsis {
+  min-width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  font-weight: 600;
 }
 
 /* PROFESSORS SECTION */
