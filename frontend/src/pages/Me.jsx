@@ -58,6 +58,14 @@ function Me({ onLogout }) {
     : "N/A"
   const major = userData?.student?.major || ""
 
+  const reportedViolations =
+    userData?.student?.reported_violations ||
+    userData?.reported_violations ||
+    []
+  const resolvedViolations = (reportedViolations || []).filter(
+    (violation) => violation.status === "resolved"
+  )
+
   const [editMajor, setEditMajor] = useState(major)
 
   useEffect(() => {
@@ -141,9 +149,45 @@ function Me({ onLogout }) {
 
             <div className="violations-section">
               <h2>Previous Violations</h2>
-              <div className="violations-card">
-                <p className="no-violations">No violations recorded</p>
-              </div>
+              {resolvedViolations.length === 0 ? (
+                <div className="violations-card">
+                  <p className="no-violations">No resolved violations recorded</p>
+                </div>
+              ) : (
+                resolvedViolations.map((violation) => (
+                  <div key={violation.id} className="violations-card">
+                    <div className="violation-meta-row">
+                      <span className="violation-meta">Case ID: {violation.id}</span>
+                      <span className="violation-meta">Review ID: {violation.review_id}</span>
+                      <span className="violation-meta">Type: {formatLabel(violation.violation_type)}</span>
+                      <span className={`violation-meta severity-${violation.severity}`}>
+                        Severity: {formatLabel(violation.severity)}
+                      </span>
+                      <span className="violation-meta">Status: {formatLabel(violation.status)}</span>
+                    </div>
+
+                    <div className="violation-meta-row" style={{ marginTop: "10px" }}>
+                      <span className="violation-meta">
+                        Reported: {new Date(violation.created_at).toLocaleString()}
+                      </span>
+                    </div>
+
+                    {violation.review?.content && (
+                      <div className="violation-detail">
+                        <p><strong>Reported Review</strong></p>
+                        <p>{violation.review.content}</p>
+                      </div>
+                    )}
+
+                    {violation.admin_notes && (
+                      <div className="violation-detail">
+                        <p><strong>Admin Notes</strong></p>
+                        <p>{violation.admin_notes}</p>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
 
             <div className="my-reviews-section">

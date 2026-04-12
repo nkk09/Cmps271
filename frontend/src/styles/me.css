@@ -134,6 +134,49 @@
   margin-bottom: 20px;
 }
 
+.violation-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.violation-meta {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #f1f3f5;
+  border: 1px solid #e9ecef;
+  color: #343a40;
+  font-size: 13px;
+}
+
+.severity-low {
+  background: #e9f7ef;
+  border-color: #c6f1d0;
+}
+
+.severity-medium {
+  background: #fff4e6;
+  border-color: #ffe8cc;
+}
+
+.severity-high {
+  background: #ffe3e3;
+  border-color: #f5c6c6;
+}
+
+.severity-critical {
+  background: #ffe6f0;
+  border-color: #f5c0d6;
+}
+
+.violation-detail {
+  margin-top: 16px;
+  color: #333;
+  line-height: 1.6;
+}
+
 .no-violations,
 .no-reviews {
   color: #555;
