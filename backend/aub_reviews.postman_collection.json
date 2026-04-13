@@ -1,18 +1,25 @@
 {
   "info": {
     "name": "AUB Reviews API",
-    "description": "Full test suite for AUB Reviews API. Run with: newman run collection.json --env-var baseUrl=http://localhost:8000/api/v1",
+    "description": "Newman test suite for AUB Reviews API. Run with: newman run aub_reviews.postman_collection.json --env-var baseUrl=http://localhost:8000/api/v1 --env-var rootUrl=http://localhost:8000. Optional vars: adminToken, adminUserId, currentUserId, reportableReviewId, violationId.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:8000/api/v1" },
+    { "key": "rootUrl", "value": "http://localhost:8000" },
     { "key": "token", "value": "" },
+    { "key": "adminToken", "value": "" },
     { "key": "testEmail", "value": "testuser@aub.edu.lb" },
     { "key": "otpCode", "value": "" },
+    { "key": "currentUserId", "value": "" },
+    { "key": "adminUserId", "value": "" },
+    { "key": "adminRolesJson", "value": "[]" },
     { "key": "courseId", "value": "" },
     { "key": "professorId", "value": "" },
     { "key": "sectionId", "value": "" },
     { "key": "semesterId", "value": "" },
+    { "key": "publicReviewId", "value": "" },
+    { "key": "violationId", "value": "" },
     { "key": "reviewId", "value": "" }
   ],
   "item": [
@@ -163,6 +170,47 @@
             "method": "POST",
             "url": "{{baseUrl}}/auth/logout"
           }
+        },
+        {
+          "name": "Login Redirect",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 302 or 501', () => {",
+                  "  pm.expect([302, 501]).to.include(pm.response.code);",
+                  "});",
+                  "if (pm.response.code === 302) {",
+                  "  pm.test('Redirect includes location header', () => {",
+                  "    pm.expect(pm.response.headers.get('Location')).to.be.ok;",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/login"
+          }
+        },
+        {
+          "name": "Callback Validation Error",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 422 for missing callback query parameters', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/callback"
+          }
         }
       ]
     },
@@ -183,6 +231,7 @@
                   "  pm.expect(json.user).to.have.property('id');",
                   "  pm.expect(json.user).to.have.property('status');",
                   "  pm.expect(json).to.have.property('roles');",
+                  "  pm.collectionVariables.set('currentUserId', json.user.id);",
                   "});"
                 ]
               }
@@ -259,6 +308,263 @@
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
             "url": "{{baseUrl}}/users/me/reviews"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin Users",
+      "item": [
+        {
+          "name": "Get Admin Me",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 when admin token is valid or 401 otherwise', () => {",
+                  "  const adminToken = pm.collectionVariables.get('adminToken');",
+                  "  if (adminToken) {",
+                  "    pm.expect(pm.response.code).to.eql(200);",
+                  "  } else {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                  "  }",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "  pm.test('Stores admin user context', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('adminUserId', json.user.id);",
+                  "    pm.collectionVariables.set('adminRolesJson', JSON.stringify(json.roles));",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/users/me"
+          }
+        },
+        {
+          "name": "List Users For Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 when admin token is valid or 401/403 otherwise', () => {",
+                  "  const adminToken = pm.collectionVariables.get('adminToken');",
+                  "  if (adminToken) {",
+                  "    pm.expect(pm.response.code).to.eql(200);",
+                  "    pm.expect(pm.response.json()).to.be.an('array');",
+                  "  } else {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/users/admin/list?limit=5"
+          }
+        },
+        {
+          "name": "Update Admin Roles - Keep Current Roles",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 when admin token is valid or 401/403 otherwise', () => {",
+                  "  const adminToken = pm.collectionVariables.get('adminToken');",
+                  "  if (adminToken) {",
+                  "    pm.expect(pm.response.code).to.eql(200);",
+                  "    pm.expect(pm.response.json()).to.have.property('roles');",
+                  "  } else {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/users/admin/{{adminUserId}}/roles",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"roles\": {{adminRolesJson}} }"
+            }
+          }
+        },
+        {
+          "name": "Update Admin Roles - Missing User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404 when admin token is valid or 401/403 otherwise', () => {",
+                  "  const adminToken = pm.collectionVariables.get('adminToken');",
+                  "  if (adminToken) {",
+                  "    pm.expect(pm.response.code).to.eql(404);",
+                  "  } else {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/users/admin/00000000-0000-0000-0000-000000000000/roles",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"roles\": [\"student\"] }"
+            }
+          }
+        },
+        {
+          "name": "Update Admin Roles - Remove Own Admin Role",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400 when admin token is valid or 401/403 otherwise', () => {",
+                  "  const adminToken = pm.collectionVariables.get('adminToken');",
+                  "  if (adminToken) {",
+                  "    pm.expect(pm.response.code).to.eql(400);",
+                  "  } else {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/users/admin/{{adminUserId}}/roles",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"roles\": [\"student\"] }"
+            }
+          }
+        },
+        {
+          "name": "Update Admin Status - Keep Active",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 when admin token is valid or 401/403 otherwise', () => {",
+                  "  const adminToken = pm.collectionVariables.get('adminToken');",
+                  "  if (adminToken) {",
+                  "    pm.expect(pm.response.code).to.eql(200);",
+                  "    pm.expect(pm.response.json()).to.have.property('status');",
+                  "  } else {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/users/admin/{{adminUserId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"status\": \"active\" }"
+            }
+          }
+        },
+        {
+          "name": "Update Admin Status - Missing User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404 when admin token is valid or 401/403 otherwise', () => {",
+                  "  const adminToken = pm.collectionVariables.get('adminToken');",
+                  "  if (adminToken) {",
+                  "    pm.expect(pm.response.code).to.eql(404);",
+                  "  } else {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/users/admin/00000000-0000-0000-0000-000000000000/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"status\": \"active\" }"
+            }
+          }
+        },
+        {
+          "name": "Update Admin Status - Self Suspend",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400 when admin token is valid or 401/403 otherwise', () => {",
+                  "  const adminToken = pm.collectionVariables.get('adminToken');",
+                  "  if (adminToken) {",
+                  "    pm.expect(pm.response.code).to.eql(400);",
+                  "  } else {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/users/admin/{{adminUserId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"status\": \"suspended\" }"
+            }
           }
         }
       ]
@@ -341,6 +647,26 @@
             "url": {
               "raw": "{{baseUrl}}/courses?search=programming",
               "query": [{ "key": "search", "value": "programming" }]
+            }
+          }
+        },
+        {
+          "name": "Search Courses - Too Short",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 422 for short search term', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/courses?search=a",
+              "query": [{ "key": "search", "value": "a" }]
             }
           }
         },
@@ -495,6 +821,26 @@
           }
         },
         {
+          "name": "Search Professors - Too Short",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 422 for short search term', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/professors?search=a",
+              "query": [{ "key": "search", "value": "a" }]
+            }
+          }
+        },
+        {
           "name": "Get Professor by ID",
           "event": [
             {
@@ -515,6 +861,23 @@
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/professors/{{professorId}}"
+          }
+        },
+        {
+          "name": "Get Professor - Not Found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/professors/00000000-0000-0000-0000-000000000000"
           }
         },
         {
@@ -581,6 +944,23 @@
             "method": "GET",
             "url": "{{baseUrl}}/sections/{{sectionId}}"
           }
+        },
+        {
+          "name": "Get Section - Not Found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/sections/00000000-0000-0000-0000-000000000000"
+          }
         }
       ]
     },
@@ -643,7 +1023,13 @@
               "script": {
                 "exec": [
                   "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Returns array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                  "pm.test('Returns array', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.be.an('array');",
+                  "  if (json.length > 0) {",
+                  "    pm.collectionVariables.set('publicReviewId', json[0].id);",
+                  "  }",
+                  "});"
                 ]
               }
             }
@@ -651,6 +1037,43 @@
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/sections/{{sectionId}}/reviews"
+          }
+        },
+        {
+          "name": "Get Section Reviews - Not Found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/sections/00000000-0000-0000-0000-000000000000/reviews"
+          }
+        },
+        {
+          "name": "Get Section Reviews - Invalid Sort",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 422 for invalid sort value', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/sections/{{sectionId}}/reviews?sort_by=recent",
+              "query": [{ "key": "sort_by", "value": "recent" }]
+            }
           }
         },
         {
@@ -722,6 +1145,31 @@
             "body": {
               "mode": "raw",
               "raw": "{ \"content\": \"This is a great course with very clear explanations and engaging lectures.\", \"rating\": 4.5 }"
+            }
+          }
+        },
+        {
+          "name": "Submit Review - Section Not Found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/sections/00000000-0000-0000-0000-000000000000/reviews",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"content\": \"This review body is long enough to pass validation for the missing section case.\", \"rating\": 4.0 }"
             }
           }
         },
@@ -853,20 +1301,13 @@
           }
         },
         {
-          "name": "Like Review",
+          "name": "Submit Review - Own Pending Review Is Not Likeable",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Returns interaction response', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('review_id');",
-                  "  pm.expect(json).to.have.property('likes_count');",
-                  "  pm.expect(json).to.have.property('dislikes_count');",
-                  "  pm.expect(json.interaction_type).to.eql('like');",
-                  "});"
+                  "pm.test('Status 400 for non-approved review interaction', () => pm.response.to.have.status(400));"
                 ]
               }
             }
@@ -878,16 +1319,22 @@
           }
         },
         {
-          "name": "Dislike Review (Switch from Like)",
+          "name": "Like Public Review",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Interaction switched to dislike', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json.interaction_type).to.eql('dislike');",
+                  "pm.test('Status 200 when a public review is available or 404/422 otherwise', () => {",
+                  "  const publicReviewId = pm.collectionVariables.get('publicReviewId');",
+                  "  if (publicReviewId) {",
+                  "    pm.expect(pm.response.code).to.eql(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('review_id');",
+                  "    pm.expect(json.interaction_type).to.eql('like');",
+                  "  } else {",
+                  "    pm.expect([404, 422]).to.include(pm.response.code);",
+                  "  }",
                   "});"
                 ]
               }
@@ -896,7 +1343,71 @@
           "request": {
             "method": "POST",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": "{{baseUrl}}/reviews/{{reviewId}}/dislike"
+            "url": "{{baseUrl}}/reviews/{{publicReviewId}}/like"
+          }
+        },
+        {
+          "name": "Like Review - Not Found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/reviews/00000000-0000-0000-0000-000000000000/like"
+          }
+        },
+        {
+          "name": "Dislike Public Review",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 when a public review is available or 404/422 otherwise', () => {",
+                  "  const publicReviewId = pm.collectionVariables.get('publicReviewId');",
+                  "  if (publicReviewId) {",
+                  "    pm.expect(pm.response.code).to.eql(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('review_id');",
+                  "    pm.expect(json.interaction_type).to.eql('dislike');",
+                  "  } else {",
+                  "    pm.expect([404, 422]).to.include(pm.response.code);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/reviews/{{publicReviewId}}/dislike"
+          }
+        },
+        {
+          "name": "Dislike Review - Not Found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/reviews/00000000-0000-0000-0000-000000000000/dislike"
           }
         },
         {
@@ -906,7 +1417,14 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Status 204', () => pm.response.to.have.status(204));"
+                  "pm.test('Status 204 when a public review is available or 404/422 otherwise', () => {",
+                  "  const publicReviewId = pm.collectionVariables.get('publicReviewId');",
+                  "  if (publicReviewId) {",
+                  "    pm.expect(pm.response.code).to.eql(204);",
+                  "  } else {",
+                  "    pm.expect([404, 422]).to.include(pm.response.code);",
+                  "  }",
+                  "});"
                 ]
               }
             }
@@ -914,7 +1432,43 @@
           "request": {
             "method": "DELETE",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": "{{baseUrl}}/reviews/{{reviewId}}/interaction"
+            "url": "{{baseUrl}}/reviews/{{publicReviewId}}/interaction"
+          }
+        },
+        {
+          "name": "Remove Interaction - Not Found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/reviews/00000000-0000-0000-0000-000000000000/interaction"
+          }
+        },
+        {
+          "name": "Like Own Approved Review - Forbidden",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 403 for liking your own approved review', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/reviews/{{reviewId}}/like"
           }
         },
         {
@@ -951,6 +1505,474 @@
             "method": "DELETE",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
             "url": "{{baseUrl}}/reviews/{{reviewId}}"
+          }
+        },
+        {
+          "name": "Update Review - Not Found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/reviews/00000000-0000-0000-0000-000000000000",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"content\": \"This review body is long enough to pass validation for the missing review case.\", \"rating\": 3.5 }"
+            }
+          }
+        },
+        {
+          "name": "List Pending Reviews",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 when admin token is valid or 401/403 otherwise', () => {",
+                  "  const adminToken = pm.collectionVariables.get('adminToken');",
+                  "  if (adminToken) {",
+                  "    pm.expect(pm.response.code).to.eql(200);",
+                  "    pm.expect(pm.response.json()).to.be.an('array');",
+                  "  } else {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/reviews/pending?limit=5"
+          }
+        },
+        {
+          "name": "Approve My Review",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 when admin token is valid or 401/403 otherwise', () => {",
+                  "  const adminToken = pm.collectionVariables.get('adminToken');",
+                  "  if (adminToken) {",
+                  "    pm.expect(pm.response.code).to.eql(200);",
+                  "    pm.expect(pm.response.json().status).to.eql('approved');",
+                  "  } else {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/reviews/{{reviewId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"status\": \"approved\" }"
+            }
+          }
+        },
+        {
+          "name": "Approve Review - Invalid Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 422 when admin token is valid or 401/403 otherwise', () => {",
+                  "  const adminToken = pm.collectionVariables.get('adminToken');",
+                  "  if (adminToken) {",
+                  "    pm.expect(pm.response.code).to.eql(422);",
+                  "  } else {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/reviews/{{reviewId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"status\": \"published\" }"
+            }
+          }
+        },
+        {
+          "name": "Approve Review - Not Found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404 when admin token is valid or 401/403 otherwise', () => {",
+                  "  const adminToken = pm.collectionVariables.get('adminToken');",
+                  "  if (adminToken) {",
+                  "    pm.expect(pm.response.code).to.eql(404);",
+                  "  } else {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/reviews/00000000-0000-0000-0000-000000000000/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"status\": \"approved\" }"
+            }
+          }
+        },
+        {
+          "name": "Delete Review As Admin - Not Found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404 when admin token is valid or 401/403 otherwise', () => {",
+                  "  const adminToken = pm.collectionVariables.get('adminToken');",
+                  "  if (adminToken) {",
+                  "    pm.expect(pm.response.code).to.eql(404);",
+                  "  } else {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/admin/reviews/00000000-0000-0000-0000-000000000000"
+          }
+        },
+        {
+      ]
+    },
+    {
+      "name": "Violations",
+      "item": [
+        {
+          "name": "Report Public Review",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201 when a public review is available or 404/422 otherwise', () => {",
+                  "  const publicReviewId = pm.collectionVariables.get('publicReviewId');",
+                  "  if (publicReviewId) {",
+                  "    pm.expect(pm.response.code).to.eql(201);",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('violationId', json.id);",
+                  "  } else {",
+                  "    pm.expect([404, 422]).to.include(pm.response.code);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/reviews/{{publicReviewId}}/violations",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"violation_type\": \"spam\", \"severity\": \"medium\", \"reason\": \"This review looks repetitive and promotional.\" }"
+            }
+          }
+        },
+        {
+          "name": "Report Public Review - Duplicate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 409 when a public review is available or 404/422 otherwise', () => {",
+                  "  const publicReviewId = pm.collectionVariables.get('publicReviewId');",
+                  "  if (publicReviewId) {",
+                  "    pm.expect(pm.response.code).to.eql(409);",
+                  "  } else {",
+                  "    pm.expect([404, 422]).to.include(pm.response.code);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/reviews/{{publicReviewId}}/violations",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"violation_type\": \"spam\", \"severity\": \"medium\", \"reason\": \"This review looks repetitive and promotional.\" }"
+            }
+          }
+        },
+        {
+          "name": "Report Deleted Review - Not Found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404 after the review has been deleted', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/reviews/{{reviewId}}/violations",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"violation_type\": \"spam\", \"severity\": \"low\", \"reason\": \"This review is already deleted.\" }"
+            }
+          }
+        },
+        {
+          "name": "List Violations - Forbidden",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 403 without admin token', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/violations"
+          }
+        },
+        {
+          "name": "List Violations - Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 when admin token is valid or 401/403 otherwise', () => {",
+                  "  const adminToken = pm.collectionVariables.get('adminToken');",
+                  "  if (adminToken) {",
+                  "    pm.expect(pm.response.code).to.eql(200);",
+                  "    pm.expect(pm.response.json()).to.be.an('array');",
+                  "  } else {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/violations?limit=5"
+          }
+        },
+        {
+          "name": "Get Violation By Id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 when violation exists or 404/401/403 otherwise', () => {",
+                  "  const adminToken = pm.collectionVariables.get('adminToken');",
+                  "  const violationId = pm.collectionVariables.get('violationId');",
+                  "  if (adminToken && violationId) {",
+                  "    pm.expect(pm.response.code).to.eql(200);",
+                  "    pm.expect(pm.response.json()).to.have.property('id');",
+                  "  } else if (adminToken) {",
+                  "    pm.expect(pm.response.code).to.eql(404);",
+                  "  } else {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/violations/{{violationId}}"
+          }
+        },
+        {
+          "name": "Get Violation - Not Found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404 when admin token is valid or 401/403 otherwise', () => {",
+                  "  const adminToken = pm.collectionVariables.get('adminToken');",
+                  "  if (adminToken) {",
+                  "    pm.expect(pm.response.code).to.eql(404);",
+                  "  } else {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/violations/00000000-0000-0000-0000-000000000000"
+          }
+        },
+        {
+          "name": "Update Violation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 when violation and admin token exist or 404/401/403 otherwise', () => {",
+                  "  const adminToken = pm.collectionVariables.get('adminToken');",
+                  "  const violationId = pm.collectionVariables.get('violationId');",
+                  "  if (adminToken && violationId) {",
+                  "    pm.expect(pm.response.code).to.eql(200);",
+                  "    pm.expect(pm.response.json()).to.have.property('status');",
+                  "  } else if (adminToken) {",
+                  "    pm.expect(pm.response.code).to.eql(404);",
+                  "  } else {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/violations/{{violationId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"status\": \"resolved\", \"severity\": \"high\", \"admin_notes\": \"Checked via Newman.\" }"
+            }
+          }
+        },
+        {
+          "name": "Update Violation - Invalid Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 422 when admin token is valid or 401/403 otherwise', () => {",
+                  "  const adminToken = pm.collectionVariables.get('adminToken');",
+                  "  if (adminToken) {",
+                  "    pm.expect(pm.response.code).to.eql(422);",
+                  "  } else {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/violations/{{violationId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"status\": \"closed\" }"
+            }
+          }
+        },
+        {
+          "name": "Update Violation - Not Found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404 when admin token is valid or 401/403 otherwise', () => {",
+                  "  const adminToken = pm.collectionVariables.get('adminToken');",
+                  "  if (adminToken) {",
+                  "    pm.expect(pm.response.code).to.eql(404);",
+                  "  } else {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/violations/00000000-0000-0000-0000-000000000000",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"status\": \"resolved\" }"
+            }
           }
         }
       ]

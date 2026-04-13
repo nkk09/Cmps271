@@ -47,7 +47,7 @@ async def get_section_reviews(
     section_id: uuid.UUID,
     db: DBDep,
     user: CurrentUserOptional,
-    sort_by: Literal["newest", "top_rated", "most_liked"] = Query(default="newest"),
+    sort_by: Literal["newest", "top_rated", "worst_rated", "most_liked"] = Query(default="newest"),
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=50),
 ):
@@ -102,7 +102,7 @@ async def get_professor_reviews(
     professor_id: uuid.UUID,
     db: DBDep,
     user: CurrentUserOptional,
-    sort_by: Literal["newest", "top_rated", "most_liked"] = Query(default="newest"),
+    sort_by: Literal["newest", "top_rated", "worst_rated", "most_liked"] = Query(default="newest"),
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=50),
 ):
@@ -149,6 +149,21 @@ async def update_review_status(
     if review.section is not None:
         await db.refresh(review.section, attribute_names=["course", "professor", "semester"])
     return ReviewOut.model_validate(review)
+
+
+@router.delete("/admin/reviews/{review_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def admin_delete_review(
+    review_id: uuid.UUID,
+    db: DBDep,
+    _: AdminUser,
+):
+    """Admin-only: delete any review by id."""
+    review = await crud.reviews.get_by_id(db, review_id)
+    if not review:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
+
+    await crud.reviews.delete(db, review)
+    await db.commit()
 
 
 # ---------------------------------------------------------------------------
