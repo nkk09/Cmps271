@@ -172,6 +172,7 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [createFormWarning, setCreateFormWarning] = useState("")
   const [showReportForm, setShowReportForm] = useState(false)
   const [reportingReviewId, setReportingReviewId] = useState("")
   const [reportData, setReportData] = useState({
@@ -267,6 +268,21 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
       .finally(() => setLoadingFormSections(false))
   }, [formCourse])
 
+  useEffect(() => {
+    if (!showCreateForm) return
+    if (!formCourse || !formSections.length) return
+    if (formData.section_id) return
+
+    const preferred = selectedProfessor
+      ? formSections.find((s) => String(s.professor?.id) === String(selectedProfessor))
+      : null
+    const nextSection = preferred || formSections[0]
+
+    if (nextSection?.id) {
+      setFormData((f) => ({ ...f, section_id: nextSection.id }))
+    }
+  }, [showCreateForm, formCourse, formSections, formData.section_id, selectedProfessor])
+
   const availableProfessors = selectedCourse
     ? Array.from(
         new Map(
@@ -359,6 +375,7 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
   const handleCreateReview = async (e) => {
     e.preventDefault()
     setError("")
+    setCreateFormWarning("")
 
     if (!formData.section_id) {
       setError("Please select a section to review")
@@ -386,7 +403,12 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
       setSelectedProfessor("")
       await reloadReviews(postedCourse, "")
     } catch (err) {
-      setError(err.message || "Failed to post review")
+      const message = err.message || "Failed to post review"
+      if (message.toLowerCase().includes("already reviewed this section")) {
+        setCreateFormWarning("You have already reviewed this section")
+      } else {
+        setError(message)
+      }
     } finally {
       setLoading(false)
     }
@@ -454,6 +476,18 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
     }
   }
 
+  const toggleCreateForm = () => {
+    const nextOpen = !showCreateForm
+    setShowCreateForm(nextOpen)
+    setCreateFormWarning("")
+
+    if (nextOpen) {
+      // Default the write form to the currently viewed course, if any.
+      setFormCourse(selectedCourse || "")
+      setFormData((f) => ({ ...f, section_id: "" }))
+    }
+  }
+
   return (
     <div className="reviews-page">
       <div className="reviews-inner">
@@ -463,7 +497,7 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
           {isStudent && !isProfessor && (
             <button
               className="create-review-btn"
-              onClick={() => setShowCreateForm(!showCreateForm)}
+              onClick={toggleCreateForm}
             >
               {showCreateForm ? "Cancel" : "Write a Review"}
             </button>
@@ -605,6 +639,11 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
               <button type="submit" disabled={loading}>
                 {loading ? "Posting..." : "Post Review"}
               </button>
+              {createFormWarning && (
+                <div className="error-message" style={{ marginTop: "10px" }}>
+                  {createFormWarning}
+                </div>
+              )}
             </form>
           </div>
         )}
@@ -650,7 +689,7 @@ function Reviews({ user, initialCourseId = "", initialProfessorId = "", navigati
             <label>Sort By</label>
             <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
               <option value="newest">Newest</option>
-              <option value="top_rated">Top Rated</option>
+              <option value="worst_rated">Worst Rated</option>
               <option value="most_liked">Most Liked</option>
             </select>
           </div>

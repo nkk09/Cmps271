@@ -275,6 +275,10 @@ const reviews = {
     return request(`/reviews/${reviewId}`, { method: "DELETE" })
   },
 
+  async adminDelete(reviewId) {
+    return request(`/admin/reviews/${reviewId}`, { method: "DELETE" })
+  },
+
   async like(reviewId) {
     return request(`/reviews/${reviewId}/like`, { method: "POST" })
   },

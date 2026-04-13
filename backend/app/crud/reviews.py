@@ -14,7 +14,7 @@ from app.models.review import Review
 from app.models.section import Section
 
 ReviewStatus = Literal["pending", "approved", "rejected"]
-SortBy = Literal["newest", "top_rated", "most_liked"]
+SortBy = Literal["newest", "top_rated", "worst_rated", "most_liked"]
 
 
 def _review_section_options():
@@ -288,6 +288,8 @@ def _apply_sort(query, sort_by: SortBy):
         return query.order_by(desc(Review.created_at))
     elif sort_by == "top_rated":
         return query.order_by(desc(Review.rating), desc(Review.created_at))
+    elif sort_by == "worst_rated":
+        return query.order_by(Review.rating.asc(), desc(Review.created_at))
     elif sort_by == "most_liked":
         return query.order_by(
             desc(Review.likes_count - Review.dislikes_count),

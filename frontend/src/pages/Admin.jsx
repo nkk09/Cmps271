@@ -30,6 +30,8 @@ function Admin({ user }) {
   const [pendingReviews, setPendingReviews] = useState([])
   const [pendingLoading, setPendingLoading] = useState(false)
   const [moderatingId, setModeratingId] = useState("")
+  const [deletingViolationId, setDeletingViolationId] = useState("")
+  const [deletingPendingId, setDeletingPendingId] = useState("")
 
   const isAdmin = user?.roles?.includes("admin")
 
@@ -204,6 +206,44 @@ function Admin({ user }) {
     }
   }
 
+  const deletePendingReview = async (reviewId) => {
+    const confirmed = window.confirm("Delete this pending review permanently?")
+    if (!confirmed) return
+
+    setDeletingPendingId(reviewId)
+    setError("")
+    try {
+      await api.reviews.adminDelete(reviewId)
+      setPendingReviews((prev) => prev.filter((r) => r.id !== reviewId))
+    } catch (err) {
+      setError(err.message || "Failed to delete pending review")
+    } finally {
+      setDeletingPendingId("")
+    }
+  }
+
+  const deleteReviewFromViolation = async (violation) => {
+    if (!violation?.review_id) {
+      setError("This violation has no review id to delete")
+      return
+    }
+
+    const confirmed = window.confirm("Delete this reported review? This also removes linked violation records.")
+    if (!confirmed) return
+
+    setDeletingViolationId(violation.id)
+    setError("")
+    try {
+      await api.reviews.adminDelete(violation.review_id)
+      setViolations((prev) => prev.filter((v) => v.id !== violation.id))
+      setPendingReviews((prev) => prev.filter((r) => r.id !== violation.review_id))
+    } catch (err) {
+      setError(err.message || "Failed to delete reported review")
+    } finally {
+      setDeletingViolationId("")
+    }
+  }
+
   if (!isAdmin) {
     return (
       <div className="admin-page">
@@ -333,17 +373,25 @@ function Admin({ user }) {
                 <button
                   className="admin-save-btn"
                   onClick={() => moderateReview(r.id, "approved")}
-                  disabled={!!moderatingId}
+                  disabled={!!moderatingId || deletingPendingId === r.id}
                 >
                   {moderatingId === `approved:${r.id}` ? "Approving..." : "Approve"}
                 </button>
                 <button
                   className="admin-refresh-btn"
                   onClick={() => moderateReview(r.id, "rejected")}
-                  disabled={!!moderatingId}
+                  disabled={!!moderatingId || deletingPendingId === r.id}
                   style={{ marginLeft: "10px" }}
                 >
                   {moderatingId === `rejected:${r.id}` ? "Rejecting..." : "Reject"}
+                </button>
+                <button
+                  className="admin-refresh-btn"
+                  onClick={() => deletePendingReview(r.id)}
+                  disabled={!!moderatingId || deletingPendingId === r.id}
+                  style={{ marginLeft: "10px" }}
+                >
+                  {deletingPendingId === r.id ? "Deleting..." : "Delete"}
                 </button>
               </div>
             </article>
@@ -424,13 +472,23 @@ function Admin({ user }) {
                 />
               </div>
 
-              <button
-                className="admin-save-btn"
-                onClick={() => saveViolation(v)}
-                disabled={savingId === v.id}
-              >
-                {savingId === v.id ? "Saving..." : "Save Changes"}
-              </button>
+              <div className="admin-card-controls" style={{ marginTop: "10px" }}>
+                <button
+                  className="admin-save-btn"
+                  onClick={() => saveViolation(v)}
+                  disabled={savingId === v.id || deletingViolationId === v.id}
+                >
+                  {savingId === v.id ? "Saving..." : "Save Changes"}
+                </button>
+                <button
+                  className="admin-refresh-btn"
+                  onClick={() => deleteReviewFromViolation(v)}
+                  disabled={deletingViolationId === v.id || !v.review_id}
+                  style={{ marginLeft: "10px" }}
+                >
+                  {deletingViolationId === v.id ? "Deleting..." : "Delete Reported Review"}
+                </button>
+              </div>
             </article>
           ))}
         </section>
