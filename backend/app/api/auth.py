@@ -50,6 +50,15 @@ _pending_states: dict[str, dict] = {}
 _STATE_TTL = 300  # seconds
 
 
+def _get_role_from_aub_email(email: str) -> str | None:
+    """Map supported AUB email domains to application roles."""
+    if email.endswith("@mail.aub.edu"):
+        return "student"
+    if email.endswith("@aub.edu.lb"):
+        return "professor"
+    return None
+
+
 def _pkce_pair() -> tuple[str, str]:
     """Return (code_verifier, code_challenge) using S256 method."""
     verifier = secrets.token_urlsafe(64)
@@ -167,11 +176,8 @@ async def oauth_callback(
         )
 
     # Determine role from AUB email domain
-    if email.endswith("@mail.aub.edu"):
-        role_name = "student"
-    elif email.endswith("@aub.edu.lb"):
-        role_name = "professor"
-    else:
+    role_name = _get_role_from_aub_email(email)
+    if role_name is None:
         logger.warning(f"OAuth login rejected — unrecognised email domain, index={blind_index(email)}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -228,9 +234,10 @@ async def request_otp(body: OTPRequest, db: DBDep):
     """
     email = body.email.lower().strip()
     idx = blind_index(email)
+    role_name = _get_role_from_aub_email(email)
 
     # If OAuth is enabled we short-circuit to the Entra login flow.
-    # Only allow AUB student emails for OAuth-initiated sign-in.
+    # Allow supported AUB email domains for OAuth-initiated sign-in.
     if settings.ENABLE_OAUTH:
         if not entra_client:
             raise HTTPException(
@@ -238,11 +245,10 @@ async def request_otp(body: OTPRequest, db: DBDep):
                 detail="OAuth is not enabled. Check ENTRA_ settings in .env.",
             )
 
-        # Accept only student AUB emails for this path as requested
-        if not email.endswith("@mail.aub.edu"):
+        if role_name is None:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="OAuth sign-in is only allowed for @mail.aub.edu addresses.",
+                detail="OAuth sign-in is only allowed for @mail.aub.edu or @aub.edu.lb addresses.",
             )
 
         # Create PKCE + state and store it so /callback can validate
@@ -257,6 +263,12 @@ async def request_otp(body: OTPRequest, db: DBDep):
 
         auth_url = entra_client.get_authorization_url(state=state, code_challenge=code_challenge, login_hint=email)
         return {"oauth": True, "auth_url": auth_url}
+
+    if role_name is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only AUB email addresses (@mail.aub.edu or @aub.edu.lb) are allowed.",
+        )
 
     if await crud.otps.is_rate_limited(db, email):
         logger.warning(f"OTP rate limit hit — email_index={idx}")
@@ -280,10 +292,17 @@ async def request_otp(body: OTPRequest, db: DBDep):
 async def verify_otp(body: OTPVerify, db: DBDep):
     """
     Verify an OTP code. On success, returns a JWT access token.
-    New users get a student profile created automatically.
+    New users get the role inferred from their AUB email domain.
     """
     email = body.email.lower().strip()
     idx = blind_index(email)
+    role_name = _get_role_from_aub_email(email)
+
+    if role_name is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only AUB email addresses (@mail.aub.edu or @aub.edu.lb) are allowed.",
+        )
 
     success, otp, error = await crud.otps.verify(db, email=email, plain_code=body.code)
 
@@ -305,8 +324,9 @@ async def verify_otp(body: OTPVerify, db: DBDep):
 
     if is_new:
         user = await crud.users.create(db, email=email)
-        await crud.students.create(db, user_id=user.id)
-        role = await crud.roles.get_role_by_name(db, "student")
+        if role_name == "student":
+            await crud.students.create(db, user_id=user.id)
+        role = await crud.roles.get_role_by_name(db, role_name)
         if role:
             await crud.roles.assign_role_to_user(db, user_id=user.id, role_id=role.id)
         logger.info(f"New user created via OTP — email_index={idx}")
@@ -319,7 +339,7 @@ async def verify_otp(body: OTPVerify, db: DBDep):
     await db.commit()
 
     roles = await crud.roles.get_user_roles(db, user.id)
-    primary_role = roles[0].role if roles else "student"
+    primary_role = roles[0].role if roles else role_name
 
     token = create_access_token(user_id=user.id, role=primary_role)
     logger.info(f"OTP verified, token issued — email_index={idx}")

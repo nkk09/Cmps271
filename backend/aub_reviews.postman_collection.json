@@ -1679,8 +1679,7 @@
             "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
             "url": "{{baseUrl}}/admin/reviews/00000000-0000-0000-0000-000000000000"
           }
-        },
-        {
+        }
       ]
     },
     {
